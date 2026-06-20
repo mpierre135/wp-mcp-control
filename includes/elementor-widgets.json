@@ -4,7 +4,7 @@
     "editable": true,
     "preview_field": "title",
     "settings": {
-      "title": "text",
+      "title": "heading_title",
       "header_size": "text",
       "align": "text"
     }
@@ -44,7 +44,7 @@
     "editable": true,
     "preview_field": "title_text",
     "settings": {
-      "title_text": "text",
+      "title_text": "heading_title",
       "description_text": "html",
       "link": "link",
       "position": "text"
@@ -58,19 +58,102 @@
       "icon_list": "icon_list"
     }
   },
+  "counter": {
+    "label": "Counter (Elementor)",
+    "editable": true,
+    "preview_field": "title",
+    "settings": {
+      "starting_number": "plain_text",
+      "ending_number": "plain_text",
+      "prefix": "plain_text",
+      "suffix": "plain_text",
+      "title": "heading_title",
+      "duration": "plain_text"
+    }
+  },
+  "accordion": {
+    "label": "Accordion (Elementor)",
+    "editable": true,
+    "preview_field": "tabs",
+    "settings": {
+      "tabs": "repeater"
+    }
+  },
+  "price-table": {
+    "label": "Price Table (Elementor Pro)",
+    "editable": true,
+    "preview_field": "heading",
+    "settings": {
+      "heading": "heading_title",
+      "sub_heading": "text",
+      "price": "plain_text",
+      "currency_symbol": "plain_text",
+      "period": "text",
+      "button_text": "text",
+      "link": "link"
+    }
+  },
+  "image-gallery": {
+    "label": "Basic Gallery (Elementor)",
+    "editable": true,
+    "preview_field": "gallery",
+    "settings": {
+      "gallery_columns": "text",
+      "gallery_display_caption": "text"
+    }
+  },
+  "star-rating": {
+    "label": "Star Rating (Elementor)",
+    "editable": true,
+    "preview_field": "title",
+    "settings": {
+      "rating": "plain_text",
+      "title": "heading_title",
+      "star_style": "text"
+    }
+  },
+  "image-box": {
+    "label": "Image Box",
+    "editable": true,
+    "preview_field": "title_text",
+    "settings": {
+      "title_text": "heading_title",
+      "description_text": "html",
+      "image": "image",
+      "link": "link"
+    }
+  },
+  "image-carousel": {
+    "label": "Image Carousel",
+    "editable": false,
+    "preview_field": "carousel",
+    "settings": {}
+  },
+  "jet-testimonials": {
+    "label": "Jet Testimonials",
+    "editable": false,
+    "preview_field": "item_list",
+    "settings": {}
+  },
+  "wc-elements": {
+    "label": "WooCommerce Elements",
+    "editable": false,
+    "preview_field": null,
+    "settings": {}
+  },
   "raven-heading": {
-    "label": "Raven Heading",
+    "label": "Raven Heading (JupiterX)",
     "editable": true,
     "preview_field": "heading_text",
     "settings": {
-      "heading_text": "text",
+      "heading_text": "heading_title",
       "sub_heading_text": "text",
       "html_tag": "text",
       "align": "text"
     }
   },
   "raven-button": {
-    "label": "Raven Button",
+    "label": "Raven Button (JupiterX)",
     "editable": true,
     "preview_field": "button_text",
     "settings": {
@@ -80,7 +163,7 @@
     }
   },
   "raven-image": {
-    "label": "Raven Image",
+    "label": "Raven Image (JupiterX)",
     "editable": true,
     "preview_field": "image",
     "settings": {
@@ -90,13 +173,60 @@
     }
   },
   "raven-icon-box": {
-    "label": "Raven Icon Box",
+    "label": "Raven Icon Box (JupiterX)",
     "editable": true,
     "preview_field": "title",
     "settings": {
-      "title": "text",
+      "title": "heading_title",
       "description": "html",
       "link": "link"
+    }
+  },
+  "raven-counter": {
+    "label": "Raven Counter (JupiterX — use if core counter unavailable)",
+    "editable": true,
+    "preview_field": "counter_title",
+    "settings": {
+      "starting_number": "plain_text",
+      "ending_number": "plain_text",
+      "counter_title": "heading_title",
+      "counter_subtitle": "text"
+    }
+  },
+  "raven-accordion": {
+    "label": "Raven Accordion (JupiterX — use if core accordion unavailable)",
+    "editable": true,
+    "preview_field": "tabs",
+    "settings": {
+      "tabs": "repeater"
+    }
+  },
+  "raven-price-table": {
+    "label": "Raven Price Table (JupiterX — use if Elementor Pro price-table unavailable)",
+    "editable": true,
+    "preview_field": "title",
+    "settings": {
+      "title": "heading_title",
+      "subtitle": "text",
+      "price": "plain_text",
+      "currency": "plain_text",
+      "button_text": "text",
+      "link": "link"
+    }
+  },
+  "raven-gallery": {
+    "label": "Raven Gallery (JupiterX — use if core gallery unavailable)",
+    "editable": false,
+    "preview_field": "gallery",
+    "settings": {}
+  },
+  "raven-star-rating": {
+    "label": "Raven Star Rating (JupiterX — use if core star-rating unavailable)",
+    "editable": true,
+    "preview_field": "title",
+    "settings": {
+      "rating": "plain_text",
+      "title": "heading_title"
     }
   },
   "raven-photo-roller": {
@@ -122,7 +252,7 @@
     "editable": true,
     "preview_field": "title",
     "settings": {
-      "title": "text"
+      "title": "heading_title"
     }
   },
   "jet-button": {

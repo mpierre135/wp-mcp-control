@@ -72,4 +72,36 @@ curl -s -X POST -H "$AUTH" -H "Content-Type: application/json" \
   "$BASE/elementor/pages/$PAGE_ID/regenerate" | python3 -m json.tool
 
 echo ""
+echo "9. Dry-run create blank page"
+curl -s -X POST -H "$AUTH" -H "Content-Type: application/json" \
+  -H "$DRY" \
+  -d '{"title":"MCP Blank Test","template":"elementor_header_footer","confirm":true}' \
+  "$BASE/elementor/pages/create-blank" | python3 -m json.tool
+
+echo ""
+echo "10. Dry-run clear page canvas"
+curl -s -X POST -H "$AUTH" -H "Content-Type: application/json" \
+  -H "$DRY" \
+  -d '{"confirm":true}' \
+  "$BASE/elementor/pages/$PAGE_ID/clear" | python3 -m json.tool
+
+echo ""
+echo "11. Dry-run repair JSON (page $PAGE_ID)"
+curl -s -X POST -H "$AUTH" -H "Content-Type: application/json" \
+  -H "$DRY" \
+  -d '{}' \
+  "$BASE/elementor/pages/$PAGE_ID/repair-json" | python3 -m json.tool
+
+echo ""
+echo "12. Verify heading prices on page $PAGE_ID"
+curl -s -H "$AUTH" "$BASE/elementor/pages/$PAGE_ID/widgets?widget_type=heading" | python3 -c "
+import json,sys
+d=json.load(sys.stdin)
+for i in d.get('items',[]):
+    t=i.get('text','')
+    if '400' in t or '300' in t:
+        print(' heading:', repr(t))
+"
+
+echo ""
 echo "Done. To apply real changes, remove X-WP-MCP-Dry-Run header and set confirm:true when safe mode is on."

@@ -64,8 +64,22 @@ class WP_MCP_Elementor {
 			return array();
 		}
 
-		$data = json_decode( $raw, true );
-		if ( ! is_array( $data ) ) {
+		$data = self::decode_elementor_raw( $raw );
+		if ( is_wp_error( $data ) ) {
+			return $data;
+		}
+
+		return self::repair_tree_strings( $data );
+	}
+
+	/**
+	 * Decode raw Elementor JSON meta with fallbacks for slash/encoding issues.
+	 *
+	 * @param string $raw Raw meta value.
+	 * @return array|WP_Error
+	 */
+	public static function decode_elementor_raw( $raw ) {
+		if ( ! is_string( $raw ) ) {
 			return new WP_Error(
 				'invalid_elementor_data',
 				__( 'Elementor data is corrupted or invalid JSON.', 'wp-mcp-control' ),
@@ -73,7 +87,148 @@ class WP_MCP_Elementor {
 			);
 		}
 
-		return $data;
+		$candidates = array( $raw, wp_unslash( $raw ), stripslashes( $raw ) );
+		$candidates  = array_values( array_unique( $candidates ) );
+
+		foreach ( $candidates as $candidate ) {
+			$data = json_decode( $candidate, true );
+			if ( is_array( $data ) ) {
+				return $data;
+			}
+		}
+
+		return new WP_Error(
+			'invalid_elementor_data',
+			__( 'Elementor data is corrupted or invalid JSON.', 'wp-mcp-control' ),
+			array( 'status' => 500 )
+		);
+	}
+
+	/**
+	 * Repair known string corruption patterns in the element tree.
+	 *
+	 * Fixes $400n-style corruption where a trailing JSON newline (\n) lost its backslash.
+	 *
+	 * @param array $tree Element tree.
+	 * @return array
+	 */
+	public static function repair_tree_strings( $tree ) {
+		if ( ! is_array( $tree ) ) {
+			return array();
+		}
+
+		foreach ( $tree as &$element ) {
+			if ( ! is_array( $element ) ) {
+				continue;
+			}
+
+			if ( ! empty( $element['settings'] ) && is_array( $element['settings'] ) ) {
+				$element['settings'] = self::repair_settings_strings(
+					$element['settings'],
+					isset( $element['widgetType'] ) ? $element['widgetType'] : ''
+				);
+			}
+
+			if ( ! empty( $element['elements'] ) && is_array( $element['elements'] ) ) {
+				$element['elements'] = self::repair_tree_strings( $element['elements'] );
+			}
+		}
+		unset( $element );
+
+		return $tree;
+	}
+
+	/**
+	 * Repair string values inside widget settings.
+	 *
+	 * @param array  $settings    Settings array.
+	 * @param string $widget_type Widget type.
+	 * @return array
+	 */
+	private static function repair_settings_strings( $settings, $widget_type ) {
+		$text_keys = self::get_repairable_text_keys( $widget_type );
+
+		foreach ( $settings as $key => $value ) {
+			if ( is_string( $value ) && ( empty( $text_keys ) || in_array( $key, $text_keys, true ) ) ) {
+				$settings[ $key ] = self::repair_corrupted_text( $value );
+				continue;
+			}
+
+			if ( is_array( $value ) ) {
+				if ( 'icon_list' === $key || 'item_list' === $key || 'carousel' === $key ) {
+					foreach ( $value as $index => $item ) {
+						if ( is_array( $item ) && isset( $item['text'] ) && is_string( $item['text'] ) ) {
+							$value[ $index ]['text'] = self::repair_corrupted_text( $item['text'] );
+						}
+						if ( is_array( $item ) && isset( $item['item_text'] ) && is_string( $item['item_text'] ) ) {
+							$value[ $index ]['item_text'] = self::repair_corrupted_text( $item['item_text'] );
+						}
+					}
+				}
+				$settings[ $key ] = $value;
+			}
+		}
+
+		return $settings;
+	}
+
+	/**
+	 * Settings keys that may contain user-facing text worth repairing.
+	 *
+	 * @param string $widget_type Widget type.
+	 * @return array
+	 */
+	private static function get_repairable_text_keys( $widget_type ) {
+		$def = WP_MCP_Elementor_Catalog::get_definition( $widget_type );
+		if ( $def && ! empty( $def['settings'] ) ) {
+			$keys = array();
+			foreach ( $def['settings'] as $setting_key => $type ) {
+				if ( in_array( $type, array( 'text', 'html', 'heading_title', 'plain_text' ), true ) ) {
+					$keys[] = $setting_key;
+				}
+			}
+			if ( ! empty( $keys ) ) {
+				return $keys;
+			}
+		}
+
+		return array( 'title', 'heading_text', 'title_text', 'text', 'editor', 'button_text', 'description', 'description_text' );
+	}
+
+	/**
+	 * Fix a single text value corrupted by JSON newline escape loss.
+	 *
+	 * @param string $value Raw value.
+	 * @return string
+	 */
+	public static function repair_corrupted_text( $value ) {
+		if ( ! is_string( $value ) || '' === $value ) {
+			return $value;
+		}
+
+		// $400n where \n escape was lost during copy/encode round-trip.
+		if ( preg_match( '/^\$(\d+(?:\.\d+)?(?:\+)?)n$/', $value, $matches ) ) {
+			return '$' . $matches[1];
+		}
+
+		// Accidental trailing newline in price headings (stored as literal \n in Elementor).
+		if ( preg_match( '/^\$(\d+(?:\.\d+)?(?:\+)?)\n+$/', $value, $matches ) ) {
+			return '$' . $matches[1];
+		}
+
+		return $value;
+	}
+
+	/**
+	 * Normalize text for comparisons (preview, match_text lookups).
+	 *
+	 * @param string $value Raw value.
+	 * @return string
+	 */
+	public static function normalize_compare_text( $value ) {
+		$value = self::repair_corrupted_text( $value );
+		$value = wp_strip_all_tags( $value );
+		return trim( preg_replace( '/\s+/u', ' ', $value ) );
 	}
 
 	/**
@@ -247,7 +402,9 @@ class WP_MCP_Elementor {
 			}
 
 			if ( $match_text && isset( $item['text'] ) ) {
-				if ( false === stripos( $item['text'], $match_text ) ) {
+				$haystack = self::normalize_compare_text( $item['text'] );
+				$needle   = self::normalize_compare_text( $match_text );
+				if ( '' !== $needle && false === stripos( $haystack, $needle ) ) {
 					continue;
 				}
 			}
@@ -385,7 +542,7 @@ class WP_MCP_Elementor {
 
 		$def   = WP_MCP_Elementor_Catalog::get_definition( $widget_type );
 		$field = isset( $def['settings'][ $settings_key ] ) ? $def['settings'][ $settings_key ] : 'text';
-		$value = 'html' === $field ? wp_kses_post( $new_text ) : sanitize_text_field( $new_text );
+		$value = WP_MCP_Elementor_Catalog::sanitize_setting_value( $field, $new_text );
 
 		return self::update_element(
 			$post_id,
@@ -588,7 +745,14 @@ class WP_MCP_Elementor {
 	 * @return true|WP_Error
 	 */
 	public static function save_data( $post_id, $data ) {
-		$json = wp_json_encode( $data );
+		$data = self::repair_tree_strings( $data );
+
+		if ( self::save_data_via_elementor( $post_id, $data ) ) {
+			self::regenerate_assets( $post_id );
+			return true;
+		}
+
+		$json = wp_json_encode( $data, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES );
 		if ( false === $json ) {
 			return new WP_Error( 'encode_failed', __( 'Failed to encode Elementor data.', 'wp-mcp-control' ), array( 'status' => 500 ) );
 		}
@@ -603,6 +767,87 @@ class WP_MCP_Elementor {
 		self::regenerate_assets( $post_id );
 
 		return true;
+	}
+
+	/**
+	 * Persist element tree through Elementor's document API when available.
+	 *
+	 * @param int   $post_id Post ID.
+	 * @param array $data    Element tree.
+	 * @return bool True when saved via Elementor.
+	 */
+	private static function save_data_via_elementor( $post_id, $data ) {
+		if ( ! class_exists( '\Elementor\Plugin' ) ) {
+			return false;
+		}
+
+		$plugin = \Elementor\Plugin::$instance;
+		if ( ! isset( $plugin->documents ) ) {
+			return false;
+		}
+
+		$document = $plugin->documents->get( $post_id, false );
+		if ( ! $document || ! method_exists( $document, 'save' ) ) {
+			return false;
+		}
+
+		$document->save(
+			array(
+				'elements' => $data,
+			)
+		);
+
+		return true;
+	}
+
+	/**
+	 * Re-save Elementor JSON to fix corruption on an existing page.
+	 *
+	 * @param int $post_id Post ID.
+	 * @return array|WP_Error
+	 */
+	public static function repair_page_data( $post_id ) {
+		$data = self::get_data( $post_id );
+		if ( is_wp_error( $data ) ) {
+			return $data;
+		}
+
+		$before = self::collect_heading_titles( $data );
+		$saved  = self::save_data( $post_id, $data );
+		if ( is_wp_error( $saved ) ) {
+			return $saved;
+		}
+
+		$after = self::collect_heading_titles( self::get_data( $post_id ) );
+
+		return array(
+			'post_id'        => (int) $post_id,
+			'repaired'       => true,
+			'headings_before' => $before,
+			'headings_after'  => $after,
+		);
+	}
+
+	/**
+	 * Collect heading title previews from a tree (for repair diagnostics).
+	 *
+	 * @param array $tree Element tree.
+	 * @return array
+	 */
+	private static function collect_heading_titles( $tree ) {
+		$titles = array();
+		$flat   = self::flatten_elements( $tree );
+
+		foreach ( $flat as $item ) {
+			if ( empty( $item['widgetType'] ) || 'heading' !== $item['widgetType'] ) {
+				continue;
+			}
+			if ( ! empty( $item['text'] ) ) {
+				$titles[] = $item['text'];
+			}
+		}
+
+		return $titles;
 	}
 
 	/**

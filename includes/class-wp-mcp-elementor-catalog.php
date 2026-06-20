@@ -146,9 +146,41 @@ class WP_MCP_Elementor_Catalog {
 				}
 				return '';
 
+			case 'tabs':
+			case 'item_list':
+			case 'carousel':
+			case 'gallery':
+				if ( is_array( $value ) ) {
+					$labels = array();
+					foreach ( $value as $item ) {
+						if ( ! is_array( $item ) ) {
+							continue;
+						}
+						foreach ( array( 'tab_title', 'title', 'text', 'item_text' ) as $label_key ) {
+							if ( ! empty( $item[ $label_key ] ) ) {
+								$labels[] = (string) $item[ $label_key ];
+								break;
+							}
+						}
+					}
+					return implode( ', ', array_slice( $labels, 0, 3 ) );
+				}
+				return '';
+
 			default:
-				return wp_strip_all_tags( (string) $value );
+				return WP_MCP_Elementor::normalize_compare_text( wp_strip_all_tags( (string) $value ) );
 		}
+	}
+
+	/**
+	 * Public sanitizer entry for semantic update helpers.
+	 *
+	 * @param string $type  Field sanitizer type.
+	 * @param mixed  $value Value.
+	 * @return mixed|null
+	 */
+	public static function sanitize_setting_value( $type, $value ) {
+		return self::sanitize_field( $type, $value );
 	}
 
 	/**
@@ -207,6 +239,14 @@ class WP_MCP_Elementor_Catalog {
 	 */
 	private static function sanitize_field( $type, $value ) {
 		switch ( $type ) {
+			case 'heading_title':
+				$value = wp_check_invalid_utf8( (string) $value );
+				$value = wp_kses( $value, array( 'br' => array() ) );
+				return trim( $value, "\r\n" );
+
+			case 'plain_text':
+				return wp_check_invalid_utf8( (string) $value );
+
 			case 'text':
 				return sanitize_text_field( $value );
 
@@ -278,14 +318,49 @@ class WP_MCP_Elementor_Catalog {
 						break;
 					}
 					if ( is_array( $item ) && isset( $item['text'] ) ) {
-						$list[] = array(
+						$entry = array(
 							'text' => sanitize_text_field( $item['text'] ),
 							'_id'  => isset( $item['_id'] ) ? sanitize_text_field( $item['_id'] ) : self::generate_id(),
 						);
+						if ( isset( $item['selected_icon'] ) && is_array( $item['selected_icon'] ) ) {
+							$entry['selected_icon'] = $item['selected_icon'];
+						}
+						$list[] = $entry;
 						$count++;
 					}
 				}
 				return ! empty( $list ) ? $list : null;
+
+			case 'repeater':
+				if ( ! is_array( $value ) ) {
+					return null;
+				}
+				$items = array();
+				$count = 0;
+				foreach ( $value as $item ) {
+					if ( $count >= 30 ) {
+						break;
+					}
+					if ( ! is_array( $item ) ) {
+						continue;
+					}
+					$clean_item = array();
+					foreach ( $item as $item_key => $item_value ) {
+						if ( '_id' === $item_key ) {
+							$clean_item['_id'] = sanitize_text_field( $item_value );
+							continue;
+						}
+						if ( is_string( $item_value ) ) {
+							$clean_item[ $item_key ] = sanitize_text_field( $item_value );
+						}
+					}
+					if ( empty( $clean_item['_id'] ) ) {
+						$clean_item['_id'] = self::generate_id();
+					}
+					$items[] = $clean_item;
+					$count++;
+				}
+				return ! empty( $items ) ? $items : null;
 
 			default:
 				return sanitize_text_field( $value );
@@ -313,11 +388,11 @@ class WP_MCP_Elementor_Catalog {
 
 		switch ( $widget_type ) {
 			case 'heading':
-			case 'raven-heading':
 				$defaults = array( 'title' => 'New Heading', 'header_size' => 'h2' );
-				if ( 'raven-heading' === $widget_type ) {
-					$defaults = array( 'heading_text' => 'New Heading', 'html_tag' => 'h2' );
-				}
+				break;
+
+			case 'raven-heading':
+				$defaults = array( 'heading_text' => 'New Heading', 'html_tag' => 'h2' );
 				break;
 
 			case 'text-editor':
@@ -345,7 +420,19 @@ class WP_MCP_Elementor_Catalog {
 				$defaults = array( 'title' => 'Feature', 'description' => 'Description' );
 				break;
 
+			case 'counter':
+				$defaults = array( 'starting_number' => '0', 'ending_number' => '100', 'title' => 'Counter' );
+				break;
+
+			case 'star-rating':
+				$defaults = array( 'rating' => '5', 'title' => 'Rating' );
+				break;
+
 			default:
+				$def = self::get_definition( $widget_type );
+				if ( $def && ! empty( $def['editable'] ) ) {
+					return self::sanitize_widget_settings( $widget_type, $overrides );
+				}
 				return new WP_Error( 'unsupported_widget', __( 'Cannot create default settings for this widget.', 'wp-mcp-control' ), array( 'status' => 400 ) );
 		}
 

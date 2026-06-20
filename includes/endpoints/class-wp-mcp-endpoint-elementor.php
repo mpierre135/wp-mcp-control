@@ -147,6 +147,36 @@ class WP_MCP_Endpoint_Elementor {
 
 		register_rest_route(
 			'wp-mcp/v1',
+			'/elementor/pages/create-blank',
+			array(
+				'methods'             => 'POST',
+				'callback'            => array( __CLASS__, 'create_blank_page' ),
+				'permission_callback' => array( 'WP_MCP_REST', 'permission_callback' ),
+			)
+		);
+
+		register_rest_route(
+			'wp-mcp/v1',
+			'/elementor/pages/(?P<id>\d+)/clear',
+			array(
+				'methods'             => 'POST',
+				'callback'            => array( __CLASS__, 'clear_page' ),
+				'permission_callback' => array( 'WP_MCP_REST', 'permission_callback' ),
+			)
+		);
+
+		register_rest_route(
+			'wp-mcp/v1',
+			'/elementor/pages/(?P<id>\d+)/repair-json',
+			array(
+				'methods'             => 'POST',
+				'callback'            => array( __CLASS__, 'repair_json' ),
+				'permission_callback' => array( 'WP_MCP_REST', 'permission_callback' ),
+			)
+		);
+
+		register_rest_route(
+			'wp-mcp/v1',
 			'/elementor/pages/(?P<id>\d+)/parent',
 			array(
 				'methods'             => 'GET',
@@ -583,6 +613,89 @@ class WP_MCP_Endpoint_Elementor {
 			$request
 		);
 
+		if ( is_wp_error( $result ) ) {
+			return $result;
+		}
+
+		return new WP_REST_Response( $result, 200 );
+	}
+
+	/**
+	 * POST create blank Elementor page.
+	 *
+	 * @param WP_REST_Request $request Request.
+	 * @return WP_REST_Response|WP_Error
+	 */
+	public static function create_blank_page( WP_REST_Request $request ) {
+		$check = self::require_elementor();
+		if ( is_wp_error( $check ) ) {
+			return $check;
+		}
+
+		$params = $request->get_json_params();
+		if ( ! is_array( $params ) ) {
+			$params = array();
+		}
+
+		$result = WP_MCP_Elementor_Templates::create_blank_page(
+			isset( $params['title'] ) ? $params['title'] : '',
+			isset( $params['slug'] ) ? $params['slug'] : '',
+			isset( $params['status'] ) ? $params['status'] : 'draft',
+			isset( $params['template'] ) ? $params['template'] : 'elementor_header_footer',
+			$request
+		);
+
+		if ( is_wp_error( $result ) ) {
+			return $result;
+		}
+
+		return new WP_REST_Response( $result, 200 );
+	}
+
+	/**
+	 * POST clear page canvas (keep theme header/footer template).
+	 *
+	 * @param WP_REST_Request $request Request.
+	 * @return WP_REST_Response|WP_Error
+	 */
+	public static function clear_page( WP_REST_Request $request ) {
+		$check = self::require_elementor();
+		if ( is_wp_error( $check ) ) {
+			return $check;
+		}
+
+		$result = WP_MCP_Elementor_Tree::clear_page_canvas( (int) $request['id'], $request );
+		if ( is_wp_error( $result ) ) {
+			return $result;
+		}
+
+		return new WP_REST_Response( $result, 200 );
+	}
+
+	/**
+	 * POST repair Elementor JSON on an existing page.
+	 *
+	 * @param WP_REST_Request $request Request.
+	 * @return WP_REST_Response|WP_Error
+	 */
+	public static function repair_json( WP_REST_Request $request ) {
+		$check = self::require_elementor();
+		if ( is_wp_error( $check ) ) {
+			return $check;
+		}
+
+		if ( WP_MCP_REST::is_dry_run( $request ) ) {
+			return new WP_REST_Response(
+				array(
+					'dry_run'  => true,
+					'post_id'  => (int) $request['id'],
+					'action'   => 'repair_json',
+				),
+				200
+			);
+		}
+
+		$result = WP_MCP_Elementor::repair_page_data( (int) $request['id'] );
 		if ( is_wp_error( $result ) ) {
 			return $result;
 		}

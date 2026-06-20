@@ -595,6 +595,9 @@ class WP_MCP_Elementor_Tree {
 				continue;
 			}
 			$element['id'] = self::generate_element_id();
+			if ( ! empty( $element['settings'] ) && is_array( $element['settings'] ) ) {
+				$element['settings'] = self::remap_settings_ids( $element['settings'] );
+			}
 			if ( ! empty( $element['elements'] ) && is_array( $element['elements'] ) ) {
 				$element['elements'] = self::remap_element_ids( $element['elements'] );
 			}
@@ -602,5 +605,164 @@ class WP_MCP_Elementor_Tree {
 		}
 
 		return $result;
+	}
+
+	/**
+	 * Remap nested _id fields inside settings repeaters.
+	 *
+	 * @param array $settings Settings array.
+	 * @return array
+	 */
+	public static function remap_settings_ids( $settings ) {
+		foreach ( $settings as $key => $value ) {
+			if ( is_array( $value ) ) {
+				$settings[ $key ] = self::remap_repeater_ids( $value );
+			}
+		}
+
+		return $settings;
+	}
+
+	/**
+	 * Remap _id keys inside repeater item arrays.
+	 *
+	 * @param array $items Repeater items.
+	 * @return array
+	 */
+	private static function remap_repeater_ids( $items ) {
+		$is_list = array_keys( $items ) === range( 0, count( $items ) - 1 );
+
+		if ( $is_list ) {
+			$remapped = array();
+			foreach ( $items as $item ) {
+				if ( ! is_array( $item ) ) {
+					$remapped[] = $item;
+					continue;
+				}
+				if ( isset( $item['_id'] ) ) {
+					$item['_id'] = self::generate_element_id();
+				}
+				foreach ( $item as $sub_key => $sub_value ) {
+					if ( is_array( $sub_value ) ) {
+						$item[ $sub_key ] = self::remap_repeater_ids( $sub_value );
+					}
+				}
+				$remapped[] = $item;
+			}
+			return $remapped;
+		}
+
+		foreach ( $items as $sub_key => $sub_value ) {
+			if ( '_id' === $sub_key && is_string( $sub_value ) ) {
+				$items[ $sub_key ] = self::generate_element_id();
+			} elseif ( is_array( $sub_value ) ) {
+				$items[ $sub_key ] = self::remap_repeater_ids( $sub_value );
+			}
+		}
+
+		return $items;
+	}
+
+	/**
+	 * Deep-clone an element tree with fresh structural and repeater IDs.
+	 *
+	 * @param array $tree Source tree.
+	 * @return array
+	 */
+	public static function deep_clone_tree( $tree ) {
+		$json = wp_json_encode( $tree, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES );
+		if ( false === $json ) {
+			return self::remap_element_ids( self::deep_clone_elements( $tree ) );
+		}
+
+		$cloned = json_decode( $json, true );
+		if ( ! is_array( $cloned ) ) {
+			return self::remap_element_ids( self::deep_clone_elements( $tree ) );
+		}
+
+		return self::remap_element_ids( $cloned );
+	}
+
+	/**
+	 * Deep-clone elements preserving settings values.
+	 *
+	 * @param array $elements Source elements.
+	 * @return array
+	 */
+	private static function deep_clone_elements( $elements ) {
+		if ( ! is_array( $elements ) ) {
+			return array();
+		}
+
+		$clone = array();
+		foreach ( $elements as $element ) {
+			if ( ! is_array( $element ) ) {
+				continue;
+			}
+			$item = $element;
+			if ( ! empty( $element['elements'] ) && is_array( $element['elements'] ) ) {
+				$item['elements'] = self::deep_clone_elements( $element['elements'] );
+			}
+			$clone[] = $item;
+		}
+
+		return $clone;
+	}
+
+	/**
+	 * Clear page canvas content while keeping Elementor page shell.
+	 *
+	 * Header/footer theme builder templates are separate and unaffected.
+	 *
+	 * @param int             $post_id Post ID.
+	 * @param WP_REST_Request $request Request.
+	 * @return array|WP_Error
+	 */
+	public static function clear_page_canvas( $post_id, WP_REST_Request $request ) {
+		$confirm_check = self::check_structural_confirm( $request );
+		if ( is_wp_error( $confirm_check ) ) {
+			return $confirm_check;
+		}
+
+		if ( ! WP_MCP_Elementor::is_elementor_page( $post_id ) ) {
+			return new WP_Error( 'not_elementor', __( 'Not an Elementor page.', 'wp-mcp-control' ), array( 'status' => 400 ) );
+		}
+
+		$data = WP_MCP_Elementor::get_data( $post_id );
+		if ( is_wp_error( $data ) ) {
+			return $data;
+		}
+
+		$removed = count( $data );
+
+		if ( WP_MCP_REST::is_dry_run( $request ) ) {
+			return array(
+				'dry_run'         => true,
+				'post_id'         => (int) $post_id,
+				'sections_removed' => $removed,
+				'action'          => 'clear_page_canvas',
+			);
+		}
+
+		WP_MCP_Snapshots::create_snapshot( 'elementor', $post_id, get_post( $post_id ) );
+
+		$saved = WP_MCP_Elementor::save_data( $post_id, array() );
+		if ( is_wp_error( $saved ) ) {
+			return $saved;
+		}
+
+		WP_MCP_Logger::log_action(
+			'elementor.clear_page',
+			'elementor',
+			$post_id,
+			array( 'sections_removed' => $removed ),
+			'success'
+		);
+
+		return array(
+			'post_id'          => (int) $post_id,
+			'cleared'          => true,
+			'sections_removed' => $removed,
+		);
 	}
 }

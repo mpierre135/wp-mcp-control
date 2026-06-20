@@ -4,7 +4,7 @@ Tags: mcp, rest-api, cursor, ai, content-management
 Requires at least: 6.0
 Tested up to: 6.7
 Requires PHP: 7.4
-Stable tag: 2.1.0
+Stable tag: 2.2.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -45,6 +45,13 @@ Safe mode is enabled by default. It blocks permanent deletions, plugin/theme cha
 Any MCP-compatible client: Cursor, Claude Desktop, Agent Max, and others.
 
 == Changelog ==
+
+= 2.2.0 =
+* Fix Elementor page duplicate: safe JSON pipeline preserves heading text ($400 vs $400n corruption)
+* POST /elementor/pages/create-blank — empty canvas with header/footer template
+* POST /elementor/pages/{id}/clear — remove all canvas sections for rebuilds
+* POST /elementor/pages/{id}/repair-json — re-save corrupted Elementor JSON
+* Expanded widget catalog: counter, accordion, price-table, gallery, star-rating, image-box, Raven/JupiterX equivalents
 
 = 2.1.0 =
 * Custom MCP outbound webhooks with full event catalog and HMAC signing

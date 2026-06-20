@@ -4,7 +4,7 @@ Secure REST API for managing WordPress from **Cursor**, **Claude Desktop**, and 
 
 Pairs with the companion MCP server: [wp-mcp-control-server](https://github.com/mpierre135/wp-mcp-control-server)
 
-**Current version:** 2.1.0
+**Current version:** 2.2.0
 
 ## Install
 
@@ -72,7 +72,10 @@ Auth header: `Authorization: Bearer <token>`
 | `GET /elementor/pages/{id}` | Elementor structure |
 | `PUT /elementor/pages/{id}/text` | Find & replace text |
 | `PUT /elementor/pages/{id}/button` | Update buttons |
-| `POST /elementor/pages/duplicate` | Duplicate Elementor page |
+| `POST /elementor/pages/duplicate` | Duplicate Elementor page (safe JSON pipeline) |
+| `POST /elementor/pages/create-blank` | New page with empty canvas + header/footer template |
+| `POST /elementor/pages/{id}/clear` | Clear canvas sections for rebuilds |
+| `POST /elementor/pages/{id}/repair-json` | Fix corrupted Elementor JSON ($400n headings) |
 | `GET /blueprint` | Site blueprint for agents |
 | `GET /audit` | Site content audit |
 | `POST /cache/purge` | Purge LiteSpeed/other cache |
