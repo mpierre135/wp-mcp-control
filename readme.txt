@@ -4,7 +4,7 @@ Tags: mcp, rest-api, cursor, ai, content-management
 Requires at least: 6.0
 Tested up to: 6.7
 Requires PHP: 7.4
-Stable tag: 2.0.0
+Stable tag: 2.1.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -45,6 +45,13 @@ Safe mode is enabled by default. It blocks permanent deletions, plugin/theme cha
 Any MCP-compatible client: Cursor, Claude Desktop, Agent Max, and others.
 
 == Changelog ==
+
+= 2.1.0 =
+* Custom MCP outbound webhooks with full event catalog and HMAC signing
+* WooCommerce native webhook CRUD (product/order topics)
+* Ninja Forms webhook action management
+* Webhook delivery log, test ping, SSRF protection
+* 17 new MCP webhook tools
 
 = 2.0.0 =
 * Full platform expansion: blueprint, site audit, cache purge

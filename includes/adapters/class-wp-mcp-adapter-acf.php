@@ -132,6 +132,8 @@ class WP_MCP_Adapter_ACF extends WP_MCP_Adapter_Base {
 
 		WP_MCP_Logger::log_action( 'acf.update', 'acf', $post_id, array( 'fields' => array_keys( $clean ) ), 'success' );
 
+		WP_MCP_Webhooks::fire_mcp_event( 'acf.updated', array( 'post_id' => $post_id, 'fields' => array_keys( $clean ) ), (string) $post_id );
+
 		return array( 'post_id' => $post_id, 'updated' => true, 'fields' => $clean );
 	}
 }

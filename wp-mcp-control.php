@@ -3,7 +3,7 @@
  * Plugin Name: WP MCP Control
  * Plugin URI: https://github.com/mpierre135/wp-mcp-control
  * Description: Secure REST API and MCP integration for managing WordPress content from Cursor, Claude Desktop, and other MCP-compatible IDEs.
- * Version: 2.0.0
+ * Version: 2.1.0
  * Author: WP MCP Control
  * Author URI: https://github.com/mpierre135
  * License: GPL v2 or later
@@ -17,11 +17,11 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-define( 'WP_MCP_CONTROL_VERSION', '2.0.0' );
+define( 'WP_MCP_CONTROL_VERSION', '2.1.0' );
 define( 'WP_MCP_CONTROL_PLUGIN_FILE', __FILE__ );
 define( 'WP_MCP_CONTROL_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
 define( 'WP_MCP_CONTROL_PLUGIN_URL', plugin_dir_url( __FILE__ ) );
-define( 'WP_MCP_CONTROL_DB_VERSION', '1.0.0' );
+define( 'WP_MCP_CONTROL_DB_VERSION', '1.1.0' );
 
 require_once WP_MCP_CONTROL_PLUGIN_DIR . 'includes/class-wp-mcp-auth.php';
 require_once WP_MCP_CONTROL_PLUGIN_DIR . 'includes/class-wp-mcp-rate-limit.php';
@@ -37,6 +37,7 @@ require_once WP_MCP_CONTROL_PLUGIN_DIR . 'includes/class-wp-mcp-elementor-catalo
 require_once WP_MCP_CONTROL_PLUGIN_DIR . 'includes/class-wp-mcp-elementor-tree.php';
 require_once WP_MCP_CONTROL_PLUGIN_DIR . 'includes/class-wp-mcp-elementor-templates.php';
 require_once WP_MCP_CONTROL_PLUGIN_DIR . 'includes/class-wp-mcp-elementor.php';
+require_once WP_MCP_CONTROL_PLUGIN_DIR . 'includes/class-wp-mcp-webhooks.php';
 require_once WP_MCP_CONTROL_PLUGIN_DIR . 'includes/class-wp-mcp-rest.php';
 require_once WP_MCP_CONTROL_PLUGIN_DIR . 'includes/class-wp-mcp-admin.php';
 
@@ -103,6 +104,7 @@ final class WP_MCP_Control {
 
 		WP_MCP_Adapter_Registry::init();
 		WP_MCP_CORS::init();
+		WP_MCP_Webhooks::init();
 		WP_MCP_REST::init();
 		WP_MCP_Admin::init();
 	}
@@ -117,6 +119,8 @@ final class WP_MCP_Control {
 		$activity_table  = $wpdb->prefix . 'wp_mcp_activity_log';
 		$snapshots_table = $wpdb->prefix . 'wp_mcp_snapshots';
 		$redirects_table = $wpdb->prefix . 'wp_mcp_redirects';
+		$webhooks_table  = $wpdb->prefix . 'wp_mcp_webhooks';
+		$deliveries_table = $wpdb->prefix . 'wp_mcp_webhook_deliveries';
 
 		require_once ABSPATH . 'wp-admin/includes/upgrade.php';
 
@@ -165,6 +169,38 @@ final class WP_MCP_Control {
 		dbDelta( $sql_activity );
 		dbDelta( $sql_snapshots );
 		dbDelta( $sql_redirects );
+
+		$sql_webhooks = "CREATE TABLE {$webhooks_table} (
+			id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+			name varchar(200) NOT NULL,
+			url varchar(2000) NOT NULL,
+			secret text NOT NULL,
+			topics longtext NOT NULL,
+			enabled tinyint(1) NOT NULL DEFAULT 1,
+			created_at datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+			updated_at datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+			PRIMARY KEY  (id),
+			KEY enabled (enabled)
+		) {$charset_collate};";
+
+		$sql_deliveries = "CREATE TABLE {$deliveries_table} (
+			id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+			webhook_id bigint(20) unsigned NOT NULL,
+			topic varchar(100) NOT NULL,
+			event_id varchar(100) NOT NULL DEFAULT '',
+			request_url varchar(2000) NOT NULL,
+			response_code smallint(5) unsigned NOT NULL DEFAULT 0,
+			response_body text,
+			status varchar(20) NOT NULL DEFAULT 'pending',
+			attempts tinyint(3) unsigned NOT NULL DEFAULT 1,
+			created_at datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+			PRIMARY KEY  (id),
+			KEY webhook_id (webhook_id),
+			KEY created_at (created_at)
+		) {$charset_collate};";
+
+		dbDelta( $sql_webhooks );
+		dbDelta( $sql_deliveries );
 	}
 
 	/**
@@ -186,6 +222,9 @@ final class WP_MCP_Control {
 			'wp_mcp_allowed_post_types'   => array( 'post', 'page', 'product' ),
 			'wp_mcp_plugin_allowlist'     => array(),
 			'wp_mcp_last_request_at'      => '',
+			'wp_mcp_allow_http_webhooks'  => false,
+			'wp_mcp_allow_wildcard_webhooks' => false,
+			'wp_mcp_max_webhooks'         => 25,
 		);
 
 		foreach ( $defaults as $key => $value ) {

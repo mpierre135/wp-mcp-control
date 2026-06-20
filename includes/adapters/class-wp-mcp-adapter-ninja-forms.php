@@ -291,4 +291,254 @@ class WP_MCP_Adapter_Ninja_Forms extends WP_MCP_Adapter_Base {
 		list( $local, $domain ) = explode( '@', $email, 2 );
 		return substr( $local, 0, 1 ) . '***@' . $domain;
 	}
+
+	/**
+	 * Supported webhook action types.
+	 *
+	 * @return array
+	 */
+	private static function webhook_action_types() {
+		return array( 'webhook', 'WebHook', 'webhooks' );
+	}
+
+	/**
+	 * Check if action is a webhook type.
+	 *
+	 * @param object $action NF action.
+	 * @return bool
+	 */
+	private static function is_webhook_action( $action ) {
+		$type = $action->get_setting( 'type' );
+		return in_array( $type, self::webhook_action_types(), true );
+	}
+
+	/**
+	 * Format webhook action for API.
+	 *
+	 * @param object $action NF action.
+	 * @return array
+	 */
+	private static function format_webhook_action( $action ) {
+		$settings = $action->get_settings();
+		$url      = '';
+		if ( isset( $settings['webhook_url'] ) ) {
+			$url = $settings['webhook_url'];
+		} elseif ( isset( $settings['url'] ) ) {
+			$url = $settings['url'];
+		}
+
+		return array(
+			'id'      => (int) $action->get_id(),
+			'type'    => $action->get_setting( 'type' ),
+			'label'   => $action->get_setting( 'label' ),
+			'active'  => (bool) $action->get_setting( 'active' ),
+			'url'     => esc_url_raw( $url ),
+			'method'  => isset( $settings['method'] ) ? $settings['method'] : ( isset( $settings['http_method'] ) ? $settings['http_method'] : 'POST' ),
+			'headers' => isset( $settings['headers'] ) ? $settings['headers'] : array(),
+		);
+	}
+
+	/**
+	 * List webhook actions on a form.
+	 *
+	 * @param int $form_id Form ID.
+	 * @return array|WP_Error
+	 */
+	public static function list_webhook_actions( $form_id ) {
+		if ( ! self::is_available() ) {
+			return new WP_Error( 'ninja_forms_inactive', __( 'Ninja Forms is not active.', 'wp-mcp-control' ), array( 'status' => 503 ) );
+		}
+
+		$form = Ninja_Forms()->form()->get( $form_id );
+		if ( ! $form ) {
+			return new WP_Error( 'not_found', __( 'Form not found.', 'wp-mcp-control' ), array( 'status' => 404 ) );
+		}
+
+		$items = array();
+		foreach ( $form->get_actions() as $action ) {
+			if ( self::is_webhook_action( $action ) ) {
+				$items[] = self::format_webhook_action( $action );
+			}
+		}
+
+		if ( empty( $items ) && ! self::webhook_actions_supported() ) {
+			return array(
+				'form_id'   => (int) $form_id,
+				'items'     => array(),
+				'count'     => 0,
+				'supported' => false,
+			);
+		}
+
+		return array(
+			'form_id'   => (int) $form_id,
+			'items'     => $items,
+			'count'     => count( $items ),
+			'supported' => self::webhook_actions_supported(),
+		);
+	}
+
+	/**
+	 * Whether webhook action type exists in NF install.
+	 *
+	 * @return bool
+	 */
+	public static function webhook_actions_supported() {
+		if ( ! self::is_available() ) {
+			return false;
+		}
+		return class_exists( 'NF_Actions_WebHook' ) || class_exists( 'NF_Actions_Webhook' );
+	}
+
+	/**
+	 * Create webhook action on form.
+	 *
+	 * @param int             $form_id Form ID.
+	 * @param array           $data    Settings.
+	 * @param WP_REST_Request $request Request.
+	 * @return array|WP_Error
+	 */
+	public static function create_webhook_action( $form_id, $data, WP_REST_Request $request ) {
+		if ( ! self::is_available() ) {
+			return new WP_Error( 'ninja_forms_inactive', __( 'Ninja Forms is not active.', 'wp-mcp-control' ), array( 'status' => 503 ) );
+		}
+		if ( ! self::webhook_actions_supported() ) {
+			return new WP_Error( 'webhook_unsupported', __( 'Ninja Forms webhook actions are not available.', 'wp-mcp-control' ), array( 'status' => 503 ) );
+		}
+
+		$form = Ninja_Forms()->form()->get( $form_id );
+		if ( ! $form ) {
+			return new WP_Error( 'not_found', __( 'Form not found.', 'wp-mcp-control' ), array( 'status' => 404 ) );
+		}
+
+		$url = isset( $data['url'] ) ? $data['url'] : '';
+		$url_check = WP_MCP_Webhooks::validate_url( $url );
+		if ( is_wp_error( $url_check ) ) {
+			return $url_check;
+		}
+
+		if ( WP_MCP_REST::is_dry_run( $request ) ) {
+			return array( 'dry_run' => true, 'form_id' => $form_id, 'data' => $data );
+		}
+
+		$action = Ninja_Forms()->form( $form_id )->get()->new_action( 'webhook' );
+		if ( ! $action ) {
+			return new WP_Error( 'create_failed', __( 'Could not create webhook action.', 'wp-mcp-control' ), array( 'status' => 500 ) );
+		}
+
+		$action->update_setting( 'label', isset( $data['label'] ) ? sanitize_text_field( $data['label'] ) : 'Webhook' );
+		$action->update_setting( 'active', ! isset( $data['active'] ) || (bool) $data['active'] );
+		$action->update_setting( 'webhook_url', esc_url_raw( $url ) );
+		$action->update_setting( 'method', isset( $data['method'] ) ? sanitize_text_field( $data['method'] ) : 'post' );
+		if ( isset( $data['headers'] ) && is_array( $data['headers'] ) ) {
+			$action->update_setting( 'headers', $data['headers'] );
+		}
+		$action->save();
+
+		WP_MCP_Logger::log_action( 'ninja_forms.webhook.create', 'ninja_form', $form_id, array( 'action_id' => $action->get_id() ), 'success' );
+
+		return self::format_webhook_action( $action );
+	}
+
+	/**
+	 * Update webhook action.
+	 *
+	 * @param int             $form_id   Form ID.
+	 * @param int             $action_id Action ID.
+	 * @param array           $data      Settings.
+	 * @param WP_REST_Request $request   Request.
+	 * @return array|WP_Error
+	 */
+	public static function update_webhook_action( $form_id, $action_id, $data, WP_REST_Request $request ) {
+		if ( ! self::is_available() ) {
+			return new WP_Error( 'ninja_forms_inactive', __( 'Ninja Forms is not active.', 'wp-mcp-control' ), array( 'status' => 503 ) );
+		}
+
+		$form = Ninja_Forms()->form()->get( $form_id );
+		if ( ! $form ) {
+			return new WP_Error( 'not_found', __( 'Form not found.', 'wp-mcp-control' ), array( 'status' => 404 ) );
+		}
+
+		$action = null;
+		foreach ( $form->get_actions() as $item ) {
+			if ( (int) $item->get_id() === (int) $action_id && self::is_webhook_action( $item ) ) {
+				$action = $item;
+				break;
+			}
+		}
+
+		if ( ! $action ) {
+			return new WP_Error( 'not_found', __( 'Webhook action not found.', 'wp-mcp-control' ), array( 'status' => 404 ) );
+		}
+
+		if ( WP_MCP_REST::is_dry_run( $request ) ) {
+			return array( 'dry_run' => true, 'form_id' => $form_id, 'action_id' => $action_id, 'data' => $data );
+		}
+
+		if ( isset( $data['label'] ) ) {
+			$action->update_setting( 'label', sanitize_text_field( $data['label'] ) );
+		}
+		if ( isset( $data['active'] ) ) {
+			$action->update_setting( 'active', (bool) $data['active'] );
+		}
+		if ( isset( $data['url'] ) ) {
+			$url_check = WP_MCP_Webhooks::validate_url( $data['url'] );
+			if ( is_wp_error( $url_check ) ) {
+				return $url_check;
+			}
+			$action->update_setting( 'webhook_url', esc_url_raw( $data['url'] ) );
+		}
+		if ( isset( $data['method'] ) ) {
+			$action->update_setting( 'method', sanitize_text_field( $data['method'] ) );
+		}
+		if ( isset( $data['headers'] ) && is_array( $data['headers'] ) ) {
+			$action->update_setting( 'headers', $data['headers'] );
+		}
+		$action->save();
+
+		WP_MCP_Logger::log_action( 'ninja_forms.webhook.update', 'ninja_form', $form_id, array( 'action_id' => $action_id ), 'success' );
+
+		return self::format_webhook_action( $action );
+	}
+
+	/**
+	 * Delete webhook action.
+	 *
+	 * @param int             $form_id   Form ID.
+	 * @param int             $action_id Action ID.
+	 * @param WP_REST_Request $request   Request.
+	 * @return array|WP_Error
+	 */
+	public static function delete_webhook_action( $form_id, $action_id, WP_REST_Request $request ) {
+		if ( ! self::is_available() ) {
+			return new WP_Error( 'ninja_forms_inactive', __( 'Ninja Forms is not active.', 'wp-mcp-control' ), array( 'status' => 503 ) );
+		}
+
+		$form = Ninja_Forms()->form()->get( $form_id );
+		if ( ! $form ) {
+			return new WP_Error( 'not_found', __( 'Form not found.', 'wp-mcp-control' ), array( 'status' => 404 ) );
+		}
+
+		$found = false;
+		foreach ( $form->get_actions() as $action ) {
+			if ( (int) $action->get_id() === (int) $action_id && self::is_webhook_action( $action ) ) {
+				$found = true;
+				break;
+			}
+		}
+
+		if ( ! $found ) {
+			return new WP_Error( 'not_found', __( 'Webhook action not found.', 'wp-mcp-control' ), array( 'status' => 404 ) );
+		}
+
+		if ( WP_MCP_REST::is_dry_run( $request ) ) {
+			return array( 'dry_run' => true, 'form_id' => $form_id, 'action_id' => $action_id, 'deleted' => true );
+		}
+
+		Ninja_Forms()->form( $form_id )->get()->delete_action( $action_id );
+
+		WP_MCP_Logger::log_action( 'ninja_forms.webhook.delete', 'ninja_form', $form_id, array( 'action_id' => $action_id ), 'success' );
+
+		return array( 'form_id' => $form_id, 'action_id' => $action_id, 'deleted' => true );
+	}
 }

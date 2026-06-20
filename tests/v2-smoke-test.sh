@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
-# WP MCP Control v2.0 smoke tests (dry-run where possible)
+# WP MCP Control v2.0+ smoke tests (dry-run where possible)
 # Usage: TOKEN=xxx ./v2-smoke-test.sh
 
-set -euo pipefail
+set -uo pipefail
 
 SITE_URL="${SITE_URL:-https://chrisheadshots.com}"
 TOKEN="${TOKEN:-}"
@@ -26,20 +26,23 @@ check() {
   local code="$2"
   if [[ "$code" == "200" || "$code" == "201" ]]; then
     echo "PASS: $name (HTTP $code)"
-    ((pass++))
+    pass=$((pass + 1))
   else
     echo "FAIL: $name (HTTP $code)"
-    ((fail++))
+    fail=$((fail + 1))
   fi
 }
 
-echo "=== WP MCP Control v2.0 Smoke Tests ==="
+echo "=== WP MCP Control Smoke Tests ==="
 
 code=$(curl -s -o /dev/null -w "%{http_code}" -H "$AUTH" "$BASE/health")
 check "health" "$code"
 
 code=$(curl -s -o /dev/null -w "%{http_code}" -H "$AUTH" "$BASE/blueprint")
 check "blueprint" "$code"
+
+code=$(curl -s -o /dev/null -w "%{http_code}" -H "$AUTH" "$BASE/webhooks/topics")
+check "webhook topics" "$code"
 
 code=$(curl -s -o /dev/null -w "%{http_code}" -H "$AUTH" "$BASE/audit")
 check "site audit" "$code"
@@ -90,11 +93,21 @@ check "revisions list" "$code"
 code=$(curl -s -o /dev/null -w "%{http_code}" -H "$AUTH" "$BASE/woocommerce/products?per_page=1" 2>/dev/null || echo "503")
 if [[ "$code" == "200" || "$code" == "503" ]]; then
   echo "PASS: woocommerce products (HTTP $code)"
-  ((pass++))
+  pass=$((pass + 1))
 else
   echo "FAIL: woocommerce products (HTTP $code)"
-  ((fail++))
+  fail=$((fail + 1))
+fi
+
+code=$(curl -s -o /dev/null -w "%{http_code}" -H "$AUTH" "$BASE/woocommerce/webhooks" 2>/dev/null || echo "503")
+if [[ "$code" == "200" || "$code" == "503" ]]; then
+  echo "PASS: woocommerce webhooks (HTTP $code)"
+  pass=$((pass + 1))
+else
+  echo "FAIL: woocommerce webhooks (HTTP $code)"
+  fail=$((fail + 1))
 fi
 
 echo ""
 echo "Results: $pass passed, $fail failed"
+exit $([[ "$fail" -eq 0 ]] && echo 0 || echo 1)

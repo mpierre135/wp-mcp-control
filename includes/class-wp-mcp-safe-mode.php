@@ -137,6 +137,11 @@ class WP_MCP_Safe_Mode {
 		'delete_comment',
 		'purge_cache',
 		'restore_revision',
+		'create_webhook',
+		'delete_webhook',
+		'test_webhook',
+		'wc_create_webhook',
+		'wc_delete_webhook',
 	);
 
 	/**

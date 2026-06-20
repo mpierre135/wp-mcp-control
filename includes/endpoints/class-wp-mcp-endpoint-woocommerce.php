@@ -137,6 +137,45 @@ class WP_MCP_Endpoint_WooCommerce {
 				'permission_callback' => array( 'WP_MCP_REST', 'permission_callback' ),
 			)
 		);
+
+		register_rest_route(
+			'wp-mcp/v1',
+			'/woocommerce/webhooks',
+			array(
+				array(
+					'methods'             => 'GET',
+					'callback'            => array( __CLASS__, 'list_webhooks' ),
+					'permission_callback' => array( 'WP_MCP_REST', 'permission_callback' ),
+				),
+				array(
+					'methods'             => 'POST',
+					'callback'            => array( __CLASS__, 'create_webhook' ),
+					'permission_callback' => array( 'WP_MCP_REST', 'permission_callback' ),
+				),
+			)
+		);
+
+		register_rest_route(
+			'wp-mcp/v1',
+			'/woocommerce/webhooks/(?P<id>\d+)',
+			array(
+				array(
+					'methods'             => 'GET',
+					'callback'            => array( __CLASS__, 'get_webhook' ),
+					'permission_callback' => array( 'WP_MCP_REST', 'permission_callback' ),
+				),
+				array(
+					'methods'             => 'PUT',
+					'callback'            => array( __CLASS__, 'update_webhook' ),
+					'permission_callback' => array( 'WP_MCP_REST', 'permission_callback' ),
+				),
+				array(
+					'methods'             => 'DELETE',
+					'callback'            => array( __CLASS__, 'delete_webhook' ),
+					'permission_callback' => array( 'WP_MCP_REST', 'permission_callback' ),
+				),
+			)
+		);
 	}
 
 	/**
@@ -397,6 +436,104 @@ class WP_MCP_Endpoint_WooCommerce {
 			return $check;
 		}
 		$result = WP_MCP_Adapter_WooCommerce::get_booking( (int) $request['id'] );
+		if ( is_wp_error( $result ) ) {
+			return $result;
+		}
+		return new WP_REST_Response( $result, 200 );
+	}
+
+	/**
+	 * List WC webhooks.
+	 *
+	 * @return WP_REST_Response|WP_Error
+	 */
+	public static function list_webhooks() {
+		$check = self::require_wc();
+		if ( is_wp_error( $check ) ) {
+			return $check;
+		}
+		$result = WP_MCP_Adapter_WooCommerce::list_wc_webhooks();
+		if ( is_wp_error( $result ) ) {
+			return $result;
+		}
+		return new WP_REST_Response( $result, 200 );
+	}
+
+	/**
+	 * Get WC webhook.
+	 *
+	 * @param WP_REST_Request $request Request.
+	 * @return WP_REST_Response|WP_Error
+	 */
+	public static function get_webhook( WP_REST_Request $request ) {
+		$check = self::require_wc();
+		if ( is_wp_error( $check ) ) {
+			return $check;
+		}
+		$result = WP_MCP_Adapter_WooCommerce::get_wc_webhook( (int) $request['id'] );
+		if ( is_wp_error( $result ) ) {
+			return $result;
+		}
+		return new WP_REST_Response( $result, 200 );
+	}
+
+	/**
+	 * Create WC webhook.
+	 *
+	 * @param WP_REST_Request $request Request.
+	 * @return WP_REST_Response|WP_Error
+	 */
+	public static function create_webhook( WP_REST_Request $request ) {
+		$check = self::require_wc();
+		if ( is_wp_error( $check ) ) {
+			return $check;
+		}
+		$params = $request->get_json_params();
+		if ( ! is_array( $params ) ) {
+			$params = array();
+		}
+		$result = WP_MCP_Adapter_WooCommerce::create_wc_webhook( $params, $request );
+		if ( is_wp_error( $result ) ) {
+			return $result;
+		}
+		$status = ! empty( $result['dry_run'] ) ? 200 : 201;
+		return new WP_REST_Response( $result, $status );
+	}
+
+	/**
+	 * Update WC webhook.
+	 *
+	 * @param WP_REST_Request $request Request.
+	 * @return WP_REST_Response|WP_Error
+	 */
+	public static function update_webhook( WP_REST_Request $request ) {
+		$check = self::require_wc();
+		if ( is_wp_error( $check ) ) {
+			return $check;
+		}
+		$params = $request->get_json_params();
+		if ( ! is_array( $params ) ) {
+			$params = array();
+		}
+		$result = WP_MCP_Adapter_WooCommerce::update_wc_webhook( (int) $request['id'], $params, $request );
+		if ( is_wp_error( $result ) ) {
+			return $result;
+		}
+		return new WP_REST_Response( $result, 200 );
+	}
+
+	/**
+	 * Delete WC webhook.
+	 *
+	 * @param WP_REST_Request $request Request.
+	 * @return WP_REST_Response|WP_Error
+	 */
+	public static function delete_webhook( WP_REST_Request $request ) {
+		$check = self::require_wc();
+		if ( is_wp_error( $check ) ) {
+			return $check;
+		}
+		$result = WP_MCP_Adapter_WooCommerce::delete_wc_webhook( (int) $request['id'], $request );
 		if ( is_wp_error( $result ) ) {
 			return $result;
 		}

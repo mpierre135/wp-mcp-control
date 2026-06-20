@@ -122,6 +122,12 @@ class WP_MCP_Endpoint_Redirects {
 
 		WP_MCP_Logger::log_action( 'redirect.create', 'redirect', $wpdb->insert_id, array( 'source' => $source_path ), 'success' );
 
+		WP_MCP_Webhooks::fire_mcp_event(
+			'redirect.created',
+			array( 'id' => (int) $wpdb->insert_id, 'source' => $source_path, 'target' => $target_url ),
+			(string) $wpdb->insert_id
+		);
+
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
 		$row = $wpdb->get_row( $wpdb->prepare( "SELECT * FROM {$table} WHERE id = %d", $wpdb->insert_id ), ARRAY_A );
 

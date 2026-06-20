@@ -53,6 +53,7 @@ class WP_MCP_REST {
 			'class-wp-mcp-endpoint-revisions.php',
 			'class-wp-mcp-endpoint-plugins.php',
 			'class-wp-mcp-endpoint-cron.php',
+			'class-wp-mcp-endpoint-webhooks.php',
 		);
 
 		foreach ( $endpoints as $file ) {
@@ -93,6 +94,7 @@ class WP_MCP_REST {
 		WP_MCP_Endpoint_Revisions::register();
 		WP_MCP_Endpoint_Plugins::register();
 		WP_MCP_Endpoint_Cron::register();
+		WP_MCP_Endpoint_Webhooks::register();
 	}
 
 	/**

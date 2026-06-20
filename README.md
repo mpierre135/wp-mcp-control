@@ -4,7 +4,7 @@ Secure REST API for managing WordPress from **Cursor**, **Claude Desktop**, and 
 
 Pairs with the companion MCP server: [wp-mcp-control-server](https://github.com/mpierre135/wp-mcp-control-server)
 
-**Current version:** 2.0.0
+**Current version:** 2.1.0
 
 ## Install
 

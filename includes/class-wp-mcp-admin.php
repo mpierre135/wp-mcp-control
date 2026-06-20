@@ -92,6 +92,21 @@ class WP_MCP_Admin {
 			'sanitize_callback' => array( __CLASS__, 'sanitize_lines' ),
 			'default'           => array(),
 		) );
+		register_setting( 'wp_mcp_control', 'wp_mcp_allow_http_webhooks', array(
+			'type'              => 'boolean',
+			'sanitize_callback' => 'rest_sanitize_boolean',
+			'default'           => false,
+		) );
+		register_setting( 'wp_mcp_control', 'wp_mcp_allow_wildcard_webhooks', array(
+			'type'              => 'boolean',
+			'sanitize_callback' => 'rest_sanitize_boolean',
+			'default'           => false,
+		) );
+		register_setting( 'wp_mcp_control', 'wp_mcp_max_webhooks', array(
+			'type'              => 'integer',
+			'sanitize_callback' => 'absint',
+			'default'           => 25,
+		) );
 	}
 
 	/**
@@ -189,6 +204,9 @@ class WP_MCP_Admin {
 		$admin_users    = get_option( 'wp_mcp_allow_admin_users', false );
 		$allowed_cpts   = get_option( 'wp_mcp_allowed_post_types', array( 'post', 'page', 'product' ) );
 		$plugin_allow   = get_option( 'wp_mcp_plugin_allowlist', array() );
+		$allow_http_wh  = get_option( 'wp_mcp_allow_http_webhooks', false );
+		$allow_wildcard = get_option( 'wp_mcp_allow_wildcard_webhooks', false );
+		$max_webhooks   = get_option( 'wp_mcp_max_webhooks', 25 );
 		$public_cpts    = get_post_types( array( 'public' => true ), 'objects' );
 		$rest_url       = rest_url( 'wp-mcp/v1/health' );
 		$mcp_server_path = '/absolute/path/to/wp-mcp-control/mcp-server/dist/index.js';
@@ -378,6 +396,23 @@ class WP_MCP_Admin {
 								<label>
 									<input type="checkbox" name="wp_mcp_allow_admin_users" value="1" <?php checked( $admin_users ); ?> />
 									<?php esc_html_e( 'Allow creating administrator users when safe mode is off and confirm=true', 'wp-mcp-control' ); ?>
+								</label>
+							</td>
+						</tr>
+						<tr>
+							<th><?php esc_html_e( 'Webhook Settings', 'wp-mcp-control' ); ?></th>
+							<td>
+								<label style="display:block;margin-bottom:6px;">
+									<input type="checkbox" name="wp_mcp_allow_http_webhooks" value="1" <?php checked( $allow_http_wh ); ?> />
+									<?php esc_html_e( 'Allow HTTP (non-HTTPS) webhook URLs', 'wp-mcp-control' ); ?>
+								</label>
+								<label style="display:block;margin-bottom:6px;">
+									<input type="checkbox" name="wp_mcp_allow_wildcard_webhooks" value="1" <?php checked( $allow_wildcard ); ?> />
+									<?php esc_html_e( 'Allow wildcard (*) topic on custom webhooks', 'wp-mcp-control' ); ?>
+								</label>
+								<label>
+									<?php esc_html_e( 'Max custom webhooks:', 'wp-mcp-control' ); ?>
+									<input type="number" name="wp_mcp_max_webhooks" value="<?php echo esc_attr( $max_webhooks ); ?>" min="1" max="100" />
 								</label>
 							</td>
 						</tr>

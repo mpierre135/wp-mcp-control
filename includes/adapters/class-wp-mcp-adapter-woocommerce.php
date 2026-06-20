@@ -761,4 +761,218 @@ class WP_MCP_Adapter_WooCommerce extends WP_MCP_Adapter_Base {
 			'meta'   => WP_MCP_Meta::get_post_meta_array( $post->ID ),
 		);
 	}
+
+	/**
+	 * Format WC webhook for API.
+	 *
+	 * @param WC_Webhook $webhook Webhook.
+	 * @return array
+	 */
+	public static function format_wc_webhook( $webhook ) {
+		if ( ! $webhook || ! is_a( $webhook, 'WC_Webhook' ) ) {
+			return array();
+		}
+		return array(
+			'id'           => $webhook->get_id(),
+			'name'         => $webhook->get_name(),
+			'status'       => $webhook->get_status(),
+			'topic'        => $webhook->get_topic(),
+			'delivery_url' => $webhook->get_delivery_url(),
+			'secret'       => 'whsec_****',
+			'date_created' => $webhook->get_date_created() ? $webhook->get_date_created()->date( 'c' ) : '',
+		);
+	}
+
+	/**
+	 * List WooCommerce webhooks.
+	 *
+	 * @return array|WP_Error
+	 */
+	public static function list_wc_webhooks() {
+		if ( ! self::is_available() ) {
+			return new WP_Error( 'woocommerce_inactive', __( 'WooCommerce is not active.', 'wp-mcp-control' ), array( 'status' => 503 ) );
+		}
+
+		$webhooks = array();
+		if ( function_exists( 'wc_get_webhooks' ) ) {
+			$webhooks = wc_get_webhooks();
+		} elseif ( class_exists( 'WC_Data_Store' ) ) {
+			$data_store = WC_Data_Store::load( 'webhook' );
+			if ( $data_store && method_exists( $data_store, 'get_webhooks_ids' ) ) {
+				foreach ( $data_store->get_webhooks_ids() as $id ) {
+					$hook = wc_get_webhook( $id );
+					if ( $hook ) {
+						$webhooks[] = $hook;
+					}
+				}
+			}
+		} else {
+			return new WP_Error( 'woocommerce_inactive', __( 'WooCommerce webhooks API unavailable.', 'wp-mcp-control' ), array( 'status' => 503 ) );
+		}
+
+		$items = array();
+		foreach ( $webhooks as $webhook ) {
+			$formatted = self::format_wc_webhook( $webhook );
+			if ( $formatted ) {
+				$items[] = $formatted;
+			}
+		}
+
+		return array( 'items' => $items, 'count' => count( $items ) );
+	}
+
+	/**
+	 * Get WooCommerce webhook.
+	 *
+	 * @param int $id Webhook ID.
+	 * @return array|WP_Error
+	 */
+	public static function get_wc_webhook( $id ) {
+		if ( ! self::is_available() ) {
+			return new WP_Error( 'woocommerce_inactive', __( 'WooCommerce is not active.', 'wp-mcp-control' ), array( 'status' => 503 ) );
+		}
+
+		$webhook = wc_get_webhook( $id );
+		if ( ! $webhook ) {
+			return new WP_Error( 'not_found', __( 'Webhook not found.', 'wp-mcp-control' ), array( 'status' => 404 ) );
+		}
+
+		return self::format_wc_webhook( $webhook );
+	}
+
+	/**
+	 * Create WooCommerce webhook.
+	 *
+	 * @param array           $data    Webhook data.
+	 * @param WP_REST_Request $request Request.
+	 * @return array|WP_Error
+	 */
+	public static function create_wc_webhook( $data, WP_REST_Request $request ) {
+		if ( ! self::is_available() || ! class_exists( 'WC_Webhook' ) ) {
+			return new WP_Error( 'woocommerce_inactive', __( 'WooCommerce is not active.', 'wp-mcp-control' ), array( 'status' => 503 ) );
+		}
+
+		$name = isset( $data['name'] ) ? sanitize_text_field( $data['name'] ) : '';
+		$url  = isset( $data['delivery_url'] ) ? $data['delivery_url'] : ( isset( $data['url'] ) ? $data['url'] : '' );
+		$topic = isset( $data['topic'] ) ? sanitize_text_field( $data['topic'] ) : '';
+
+		if ( empty( $name ) || empty( $url ) || empty( $topic ) ) {
+			return new WP_Error( 'missing_fields', __( 'name, delivery_url, and topic are required.', 'wp-mcp-control' ), array( 'status' => 400 ) );
+		}
+
+		$url_check = WP_MCP_Webhooks::validate_url( $url );
+		if ( is_wp_error( $url_check ) ) {
+			return $url_check;
+		}
+
+		$confirm = WP_MCP_Safe_Mode::confirm_from_request( $request );
+		$check   = WP_MCP_Safe_Mode::check_confirm( 'wc_create_webhook', $request, $confirm );
+		if ( is_wp_error( $check ) ) {
+			return $check;
+		}
+
+		if ( WP_MCP_REST::is_dry_run( $request ) ) {
+			return array( 'dry_run' => true, 'name' => $name, 'topic' => $topic, 'delivery_url' => esc_url_raw( $url ) );
+		}
+
+		$webhook = new WC_Webhook();
+		$webhook->set_name( $name );
+		$webhook->set_user_id( get_current_user_id() ? get_current_user_id() : 1 );
+		$webhook->set_delivery_url( esc_url_raw( $url ) );
+		$webhook->set_topic( $topic );
+		$webhook->set_secret( wp_generate_password( 32, false ) );
+		$webhook->set_status( isset( $data['status'] ) ? sanitize_text_field( $data['status'] ) : 'active' );
+		$webhook->save();
+
+		WP_MCP_Logger::log_action( 'woocommerce.webhook.create', 'webhook', $webhook->get_id(), array( 'topic' => $topic ), 'success' );
+
+		$formatted = self::format_wc_webhook( $webhook );
+		$formatted['secret'] = $webhook->get_secret();
+		return $formatted;
+	}
+
+	/**
+	 * Update WooCommerce webhook.
+	 *
+	 * @param int             $id      Webhook ID.
+	 * @param array           $data    Update data.
+	 * @param WP_REST_Request $request Request.
+	 * @return array|WP_Error
+	 */
+	public static function update_wc_webhook( $id, $data, WP_REST_Request $request ) {
+		$webhook = wc_get_webhook( $id );
+		if ( ! $webhook ) {
+			return new WP_Error( 'not_found', __( 'Webhook not found.', 'wp-mcp-control' ), array( 'status' => 404 ) );
+		}
+
+		if ( WP_MCP_REST::is_dry_run( $request ) ) {
+			return array( 'dry_run' => true, 'id' => $id, 'data' => $data );
+		}
+
+		if ( isset( $data['name'] ) ) {
+			$webhook->set_name( sanitize_text_field( $data['name'] ) );
+		}
+		if ( isset( $data['delivery_url'] ) || isset( $data['url'] ) ) {
+			$url = isset( $data['delivery_url'] ) ? $data['delivery_url'] : $data['url'];
+			$url_check = WP_MCP_Webhooks::validate_url( $url );
+			if ( is_wp_error( $url_check ) ) {
+				return $url_check;
+			}
+			$webhook->set_delivery_url( esc_url_raw( $url ) );
+		}
+		if ( isset( $data['topic'] ) ) {
+			$webhook->set_topic( sanitize_text_field( $data['topic'] ) );
+		}
+		if ( isset( $data['status'] ) ) {
+			$webhook->set_status( sanitize_text_field( $data['status'] ) );
+		}
+		$webhook->save();
+
+		WP_MCP_Logger::log_action( 'woocommerce.webhook.update', 'webhook', $id, array_keys( $data ), 'success' );
+
+		return self::format_wc_webhook( $webhook );
+	}
+
+	/**
+	 * Delete WooCommerce webhook.
+	 *
+	 * @param int             $id      Webhook ID.
+	 * @param WP_REST_Request $request Request.
+	 * @return array|WP_Error
+	 */
+	public static function delete_wc_webhook( $id, WP_REST_Request $request ) {
+		$webhook = wc_get_webhook( $id );
+		if ( ! $webhook ) {
+			return new WP_Error( 'not_found', __( 'Webhook not found.', 'wp-mcp-control' ), array( 'status' => 404 ) );
+		}
+
+		$confirm = WP_MCP_Safe_Mode::confirm_from_request( $request );
+		$check   = WP_MCP_Safe_Mode::check_confirm( 'wc_delete_webhook', $request, $confirm );
+		if ( is_wp_error( $check ) ) {
+			return $check;
+		}
+
+		if ( WP_MCP_REST::is_dry_run( $request ) ) {
+			return array( 'dry_run' => true, 'id' => $id, 'deleted' => true );
+		}
+
+		$webhook->delete( true );
+
+		WP_MCP_Logger::log_action( 'woocommerce.webhook.delete', 'webhook', $id, array(), 'success' );
+
+		return array( 'id' => $id, 'deleted' => true );
+	}
+
+	/**
+	 * Count WooCommerce webhooks.
+	 *
+	 * @return int
+	 */
+	public static function count_wc_webhooks() {
+		$list = self::list_wc_webhooks();
+		if ( is_wp_error( $list ) ) {
+			return 0;
+		}
+		return (int) $list['count'];
+	}
 }

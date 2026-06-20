@@ -140,6 +140,12 @@ class WP_MCP_Endpoint_Audit {
 					'plugin' => WP_MCP_Adapter_Cache::detect_plugin(),
 				),
 				'allowed_post_types'=> WP_MCP_Meta::get_allowed_post_types(),
+				'webhooks'          => array(
+					'custom_count'          => WP_MCP_Webhooks::count_webhooks(),
+					'woocommerce_count'     => class_exists( 'WP_MCP_Adapter_WooCommerce' ) ? WP_MCP_Adapter_WooCommerce::count_wc_webhooks() : 0,
+					'ninja_forms_available' => class_exists( 'WP_MCP_Adapter_Ninja_Forms' ) && WP_MCP_Adapter_Ninja_Forms::is_available(),
+					'topic_count'           => count( WP_MCP_Webhooks::get_topic_catalog() ),
+				),
 				'plugin_version'    => WP_MCP_CONTROL_VERSION,
 			),
 			200
@@ -298,6 +304,8 @@ class WP_MCP_Endpoint_Audit {
 		}
 
 		WP_MCP_Logger::log_action( 'cache.purge', 'cache', 0, $result, 'success' );
+
+		WP_MCP_Webhooks::fire_mcp_event( 'cache.purged', $result, 'cache' );
 
 		return new WP_REST_Response( $result, 200 );
 	}
