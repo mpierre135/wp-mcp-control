@@ -26,6 +26,9 @@ class WP_MCP_Endpoint_Settings {
 		'show_on_front',
 		'page_on_front',
 		'page_for_posts',
+		'timezone_string',
+		'date_format',
+		'start_of_week',
 	);
 
 	/**
@@ -59,6 +62,9 @@ class WP_MCP_Endpoint_Settings {
 		$data = array();
 		foreach ( self::$safe_settings as $key ) {
 			$data[ $key ] = get_option( $key );
+		}
+		if ( is_multisite() ) {
+			$data['WPLANG'] = get_option( 'WPLANG' );
 		}
 		return new WP_REST_Response( $data, 200 );
 	}

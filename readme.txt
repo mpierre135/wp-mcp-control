@@ -4,7 +4,7 @@ Tags: mcp, rest-api, cursor, ai, content-management
 Requires at least: 6.0
 Tested up to: 6.7
 Requires PHP: 7.4
-Stable tag: 1.2.0
+Stable tag: 2.0.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -45,6 +45,14 @@ Safe mode is enabled by default. It blocks permanent deletions, plugin/theme cha
 Any MCP-compatible client: Cursor, Claude Desktop, Agent Max, and others.
 
 == Changelog ==
+
+= 2.0.0 =
+* Full platform expansion: blueprint, site audit, cache purge
+* Gutenberg block editing, CPT/taxonomy CRUD, revisions and snapshot diff
+* Plugin adapters: ACF, AIOSEO, WooCommerce (full order write), Ninja Forms, LiteSpeed cache
+* Users, comments, widgets, plugin allowlist, cron events
+* Elementor: find parent, regenerate CSS, Jet/Raven catalog entries
+* 65+ new MCP tools (v2.0.0 server)
 
 = 1.2.0 =
 * Elementor Phase 2–3: widget catalog, button/image updates, insert/remove/clone, duplicate page

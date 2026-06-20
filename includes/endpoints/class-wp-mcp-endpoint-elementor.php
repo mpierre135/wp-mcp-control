@@ -144,6 +144,26 @@ class WP_MCP_Endpoint_Elementor {
 				'permission_callback' => array( 'WP_MCP_REST', 'permission_callback' ),
 			)
 		);
+
+		register_rest_route(
+			'wp-mcp/v1',
+			'/elementor/pages/(?P<id>\d+)/parent',
+			array(
+				'methods'             => 'GET',
+				'callback'            => array( __CLASS__, 'find_parent' ),
+				'permission_callback' => array( 'WP_MCP_REST', 'permission_callback' ),
+			)
+		);
+
+		register_rest_route(
+			'wp-mcp/v1',
+			'/elementor/pages/(?P<id>\d+)/regenerate',
+			array(
+				'methods'             => 'POST',
+				'callback'            => array( __CLASS__, 'regenerate' ),
+				'permission_callback' => array( 'WP_MCP_REST', 'permission_callback' ),
+			)
+		);
 	}
 
 	/**
@@ -563,6 +583,46 @@ class WP_MCP_Endpoint_Elementor {
 			$request
 		);
 
+		if ( is_wp_error( $result ) ) {
+			return $result;
+		}
+
+		return new WP_REST_Response( $result, 200 );
+	}
+
+	/**
+	 * GET find insert parent.
+	 *
+	 * @param WP_REST_Request $request Request.
+	 * @return WP_REST_Response|WP_Error
+	 */
+	public static function find_parent( WP_REST_Request $request ) {
+		$check = self::require_elementor();
+		if ( is_wp_error( $check ) ) {
+			return $check;
+		}
+
+		$result = WP_MCP_Elementor::find_insert_parent( (int) $request['id'] );
+		if ( is_wp_error( $result ) ) {
+			return $result;
+		}
+
+		return new WP_REST_Response( $result, 200 );
+	}
+
+	/**
+	 * POST regenerate Elementor CSS.
+	 *
+	 * @param WP_REST_Request $request Request.
+	 * @return WP_REST_Response|WP_Error
+	 */
+	public static function regenerate( WP_REST_Request $request ) {
+		$check = self::require_elementor();
+		if ( is_wp_error( $check ) ) {
+			return $check;
+		}
+
+		$result = WP_MCP_Elementor::regenerate_page( (int) $request['id'] );
 		if ( is_wp_error( $result ) ) {
 			return $result;
 		}

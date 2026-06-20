@@ -74,6 +74,24 @@ class WP_MCP_Admin {
 			'sanitize_callback' => array( __CLASS__, 'sanitize_lines' ),
 			'default'           => array(),
 		) );
+		register_setting( 'wp_mcp_control', 'wp_mcp_allow_wc_refunds', array(
+			'type'              => 'boolean',
+			'sanitize_callback' => 'rest_sanitize_boolean',
+			'default'           => false,
+		) );
+		register_setting( 'wp_mcp_control', 'wp_mcp_allow_admin_users', array(
+			'type'              => 'boolean',
+			'sanitize_callback' => 'rest_sanitize_boolean',
+			'default'           => false,
+		) );
+		register_setting( 'wp_mcp_control', 'wp_mcp_allowed_post_types', array(
+			'sanitize_callback' => array( __CLASS__, 'sanitize_post_types' ),
+			'default'           => array( 'post', 'page', 'product' ),
+		) );
+		register_setting( 'wp_mcp_control', 'wp_mcp_plugin_allowlist', array(
+			'sanitize_callback' => array( __CLASS__, 'sanitize_lines' ),
+			'default'           => array(),
+		) );
 	}
 
 	/**
@@ -95,6 +113,26 @@ class WP_MCP_Admin {
 			}
 		}
 		return $clean;
+	}
+
+	/**
+	 * Sanitize allowed post type slugs.
+	 *
+	 * @param mixed $value Input value.
+	 * @return array
+	 */
+	public static function sanitize_post_types( $value ) {
+		if ( ! is_array( $value ) ) {
+			return array( 'post', 'page' );
+		}
+		$clean = array();
+		foreach ( $value as $slug ) {
+			$slug = sanitize_key( $slug );
+			if ( $slug && post_type_exists( $slug ) ) {
+				$clean[] = $slug;
+			}
+		}
+		return $clean ? $clean : array( 'post', 'page' );
 	}
 
 	/**
@@ -147,6 +185,11 @@ class WP_MCP_Admin {
 		$rate_limit     = get_option( 'wp_mcp_rate_limit', 60 );
 		$max_upload     = get_option( 'wp_mcp_max_upload_bytes', 10485760 );
 		$force_delete   = get_option( 'wp_mcp_allow_force_delete', false );
+		$wc_refunds     = get_option( 'wp_mcp_allow_wc_refunds', false );
+		$admin_users    = get_option( 'wp_mcp_allow_admin_users', false );
+		$allowed_cpts   = get_option( 'wp_mcp_allowed_post_types', array( 'post', 'page', 'product' ) );
+		$plugin_allow   = get_option( 'wp_mcp_plugin_allowlist', array() );
+		$public_cpts    = get_post_types( array( 'public' => true ), 'objects' );
 		$rest_url       = rest_url( 'wp-mcp/v1/health' );
 		$mcp_server_path = '/absolute/path/to/wp-mcp-control/mcp-server/dist/index.js';
 
@@ -296,6 +339,46 @@ class WP_MCP_Admin {
 							<td>
 								<textarea name="wp_mcp_ip_allowlist" rows="4" class="large-text"><?php echo esc_textarea( is_array( $ip_allowlist ) ? implode( "\n", $ip_allowlist ) : '' ); ?></textarea>
 								<p class="description"><?php esc_html_e( 'One IP per line. Leave empty to allow all IPs.', 'wp-mcp-control' ); ?></p>
+							</td>
+						</tr>
+					</table>
+					<h3><?php esc_html_e( 'v2.0 Adapter Settings', 'wp-mcp-control' ); ?></h3>
+					<table class="form-table">
+						<tr>
+							<th><?php esc_html_e( 'Allowed Post Types', 'wp-mcp-control' ); ?></th>
+							<td>
+								<?php foreach ( $public_cpts as $cpt ) : ?>
+									<label style="display:block;margin-bottom:4px;">
+										<input type="checkbox" name="wp_mcp_allowed_post_types[]" value="<?php echo esc_attr( $cpt->name ); ?>" <?php checked( in_array( $cpt->name, (array) $allowed_cpts, true ) ); ?> />
+										<?php echo esc_html( $cpt->labels->name . ' (' . $cpt->name . ')' ); ?>
+									</label>
+								<?php endforeach; ?>
+								<p class="description"><?php esc_html_e( 'Custom post types exposed via MCP CPT endpoints.', 'wp-mcp-control' ); ?></p>
+							</td>
+						</tr>
+						<tr>
+							<th><?php esc_html_e( 'Plugin Allowlist', 'wp-mcp-control' ); ?></th>
+							<td>
+								<textarea name="wp_mcp_plugin_allowlist" rows="4" class="large-text"><?php echo esc_textarea( is_array( $plugin_allow ) ? implode( "\n", $plugin_allow ) : '' ); ?></textarea>
+								<p class="description"><?php esc_html_e( 'Plugin directory slugs allowed for activate/deactivate (one per line).', 'wp-mcp-control' ); ?></p>
+							</td>
+						</tr>
+						<tr>
+							<th><?php esc_html_e( 'WooCommerce Refunds', 'wp-mcp-control' ); ?></th>
+							<td>
+								<label>
+									<input type="checkbox" name="wp_mcp_allow_wc_refunds" value="1" <?php checked( $wc_refunds ); ?> />
+									<?php esc_html_e( 'Allow order refunds via MCP (requires confirm + safe mode check)', 'wp-mcp-control' ); ?>
+								</label>
+							</td>
+						</tr>
+						<tr>
+							<th><?php esc_html_e( 'Administrator Users', 'wp-mcp-control' ); ?></th>
+							<td>
+								<label>
+									<input type="checkbox" name="wp_mcp_allow_admin_users" value="1" <?php checked( $admin_users ); ?> />
+									<?php esc_html_e( 'Allow creating administrator users when safe mode is off and confirm=true', 'wp-mcp-control' ); ?>
+								</label>
 							</td>
 						</tr>
 					</table>

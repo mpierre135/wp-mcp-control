@@ -1,0 +1,4 @@
+{
+  "title": { "type": "text", "label": "Title" },
+  "description": { "type": "html", "label": "Description" }
+}

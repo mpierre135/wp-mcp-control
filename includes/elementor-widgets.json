@@ -116,5 +116,30 @@
     "editable": false,
     "preview_field": null,
     "settings": {}
+  },
+  "jet-heading": {
+    "label": "Jet Heading",
+    "editable": true,
+    "preview_field": "title",
+    "settings": {
+      "title": "text"
+    }
+  },
+  "jet-button": {
+    "label": "Jet Button",
+    "editable": true,
+    "preview_field": "button_text",
+    "settings": {
+      "button_text": "text",
+      "button_url": "url"
+    }
+  },
+  "jet-image": {
+    "label": "Jet Image",
+    "editable": true,
+    "preview_field": "image",
+    "settings": {
+      "image": "image"
+    }
   }
 }

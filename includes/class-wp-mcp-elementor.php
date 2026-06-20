@@ -540,6 +540,47 @@ class WP_MCP_Elementor {
 	}
 
 	/**
+	 * Find first column or container suitable for widget insert.
+	 *
+	 * @param int $post_id Post ID.
+	 * @return array|WP_Error
+	 */
+	public static function find_insert_parent( $post_id ) {
+		$data = self::get_data( $post_id );
+		if ( is_wp_error( $data ) ) {
+			return $data;
+		}
+
+		$flat = self::flatten_elements( $data );
+		foreach ( $flat as $item ) {
+			if ( isset( $item['elType'] ) && in_array( $item['elType'], array( 'column', 'container' ), true ) ) {
+				return array(
+					'post_id'     => (int) $post_id,
+					'parent_id'   => $item['id'],
+					'elType'      => $item['elType'],
+					'layout_mode' => WP_MCP_Elementor_Tree::detect_layout_mode( $data ),
+				);
+			}
+		}
+
+		return new WP_Error( 'no_parent', __( 'No column or container found for widget insert.', 'wp-mcp-control' ), array( 'status' => 404 ) );
+	}
+
+	/**
+	 * Regenerate Elementor CSS for a page.
+	 *
+	 * @param int $post_id Post ID.
+	 * @return array|WP_Error
+	 */
+	public static function regenerate_page( $post_id ) {
+		if ( ! self::is_elementor_page( $post_id ) ) {
+			return new WP_Error( 'not_elementor', __( 'Not an Elementor page.', 'wp-mcp-control' ), array( 'status' => 400 ) );
+		}
+		self::regenerate_assets( $post_id );
+		return array( 'post_id' => (int) $post_id, 'regenerated' => true );
+	}
+
+	/**
 	 * Save Elementor data and regenerate assets.
 	 *
 	 * @param int   $post_id Post ID.

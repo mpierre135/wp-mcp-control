@@ -1,0 +1,10 @@
+{
+  "title": { "type": "text", "label": "SEO Title" },
+  "description": { "type": "text", "label": "Meta Description" },
+  "og_title": { "type": "text", "label": "OG Title" },
+  "og_description": { "type": "text", "label": "OG Description" },
+  "og_image": { "type": "url", "label": "OG Image URL" },
+  "canonical_url": { "type": "url", "label": "Canonical URL" },
+  "robots_noindex": { "type": "bool", "label": "No Index" },
+  "robots_nofollow": { "type": "bool", "label": "No Follow" }
+}

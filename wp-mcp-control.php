@@ -3,7 +3,7 @@
  * Plugin Name: WP MCP Control
  * Plugin URI: https://github.com/mpierre135/wp-mcp-control
  * Description: Secure REST API and MCP integration for managing WordPress content from Cursor, Claude Desktop, and other MCP-compatible IDEs.
- * Version: 1.2.0
+ * Version: 2.0.0
  * Author: WP MCP Control
  * Author URI: https://github.com/mpierre135
  * License: GPL v2 or later
@@ -17,7 +17,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-define( 'WP_MCP_CONTROL_VERSION', '1.2.0' );
+define( 'WP_MCP_CONTROL_VERSION', '2.0.0' );
 define( 'WP_MCP_CONTROL_PLUGIN_FILE', __FILE__ );
 define( 'WP_MCP_CONTROL_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
 define( 'WP_MCP_CONTROL_PLUGIN_URL', plugin_dir_url( __FILE__ ) );
@@ -28,6 +28,10 @@ require_once WP_MCP_CONTROL_PLUGIN_DIR . 'includes/class-wp-mcp-rate-limit.php';
 require_once WP_MCP_CONTROL_PLUGIN_DIR . 'includes/class-wp-mcp-logger.php';
 require_once WP_MCP_CONTROL_PLUGIN_DIR . 'includes/class-wp-mcp-snapshots.php';
 require_once WP_MCP_CONTROL_PLUGIN_DIR . 'includes/class-wp-mcp-safe-mode.php';
+require_once WP_MCP_CONTROL_PLUGIN_DIR . 'includes/class-wp-mcp-adapter-base.php';
+require_once WP_MCP_CONTROL_PLUGIN_DIR . 'includes/class-wp-mcp-adapter-registry.php';
+require_once WP_MCP_CONTROL_PLUGIN_DIR . 'includes/class-wp-mcp-meta.php';
+require_once WP_MCP_CONTROL_PLUGIN_DIR . 'includes/class-wp-mcp-blocks.php';
 require_once WP_MCP_CONTROL_PLUGIN_DIR . 'includes/class-wp-mcp-cors.php';
 require_once WP_MCP_CONTROL_PLUGIN_DIR . 'includes/class-wp-mcp-elementor-catalog.php';
 require_once WP_MCP_CONTROL_PLUGIN_DIR . 'includes/class-wp-mcp-elementor-tree.php';
@@ -97,6 +101,7 @@ final class WP_MCP_Control {
 			update_option( 'wp_mcp_db_version', WP_MCP_CONTROL_DB_VERSION );
 		}
 
+		WP_MCP_Adapter_Registry::init();
 		WP_MCP_CORS::init();
 		WP_MCP_REST::init();
 		WP_MCP_Admin::init();
@@ -176,6 +181,10 @@ final class WP_MCP_Control {
 			'wp_mcp_rate_limit'           => 60,
 			'wp_mcp_max_upload_bytes'     => 10485760,
 			'wp_mcp_allow_force_delete'   => false,
+			'wp_mcp_allow_wc_refunds'     => false,
+			'wp_mcp_allow_admin_users'    => false,
+			'wp_mcp_allowed_post_types'   => array( 'post', 'page', 'product' ),
+			'wp_mcp_plugin_allowlist'     => array(),
 			'wp_mcp_last_request_at'      => '',
 		);
 

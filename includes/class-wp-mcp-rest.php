@@ -40,6 +40,19 @@ class WP_MCP_REST {
 			'class-wp-mcp-endpoint-export.php',
 			'class-wp-mcp-endpoint-settings.php',
 			'class-wp-mcp-endpoint-elementor.php',
+			'class-wp-mcp-endpoint-audit.php',
+			'class-wp-mcp-endpoint-blocks.php',
+			'class-wp-mcp-endpoint-cpt.php',
+			'class-wp-mcp-endpoint-meta.php',
+			'class-wp-mcp-endpoint-seo.php',
+			'class-wp-mcp-endpoint-woocommerce.php',
+			'class-wp-mcp-endpoint-forms.php',
+			'class-wp-mcp-endpoint-users.php',
+			'class-wp-mcp-endpoint-comments.php',
+			'class-wp-mcp-endpoint-widgets.php',
+			'class-wp-mcp-endpoint-revisions.php',
+			'class-wp-mcp-endpoint-plugins.php',
+			'class-wp-mcp-endpoint-cron.php',
 		);
 
 		foreach ( $endpoints as $file ) {
@@ -67,6 +80,19 @@ class WP_MCP_REST {
 		WP_MCP_Endpoint_Export::register();
 		WP_MCP_Endpoint_Settings::register();
 		WP_MCP_Endpoint_Elementor::register();
+		WP_MCP_Endpoint_Audit::register();
+		WP_MCP_Endpoint_Blocks::register();
+		WP_MCP_Endpoint_Cpt::register();
+		WP_MCP_Endpoint_Meta::register();
+		WP_MCP_Endpoint_Seo::register();
+		WP_MCP_Endpoint_WooCommerce::register();
+		WP_MCP_Endpoint_Forms::register();
+		WP_MCP_Endpoint_Users::register();
+		WP_MCP_Endpoint_Comments::register();
+		WP_MCP_Endpoint_Widgets::register();
+		WP_MCP_Endpoint_Revisions::register();
+		WP_MCP_Endpoint_Plugins::register();
+		WP_MCP_Endpoint_Cron::register();
 	}
 
 	/**
@@ -212,7 +238,7 @@ class WP_MCP_REST {
 				'raw'      => $post->post_content,
 				'rendered' => apply_filters( 'the_content', $post->post_content ),
 			);
-			$data['meta']     = self::get_post_meta_array( $post->ID );
+			$data['meta']     = WP_MCP_Meta::get_post_meta_array( $post->ID );
 
 			if ( 'post' === $post->post_type ) {
 				$data['categories'] = wp_get_post_categories( $post->ID );
@@ -231,17 +257,7 @@ class WP_MCP_REST {
 	 * @return array
 	 */
 	public static function get_post_meta_array( $post_id ) {
-		$meta  = get_post_meta( $post_id );
-		$clean = array();
-
-		foreach ( $meta as $key => $values ) {
-			if ( 0 === strpos( $key, '_' ) && ! in_array( $key, array( '_wp_page_template' ), true ) ) {
-				continue;
-			}
-			$clean[ $key ] = count( $values ) === 1 ? maybe_unserialize( $values[0] ) : array_map( 'maybe_unserialize', $values );
-		}
-
-		return $clean;
+		return WP_MCP_Meta::get_post_meta_array( $post_id );
 	}
 
 	/**
@@ -294,6 +310,16 @@ class WP_MCP_REST {
 
 		if ( isset( $params['parent'] ) ) {
 			$post_data['post_parent'] = absint( $params['parent'] );
+		}
+
+		if ( ! empty( $params['scheduled_date'] ) ) {
+			$scheduled = sanitize_text_field( $params['scheduled_date'] );
+			$timestamp = strtotime( $scheduled );
+			if ( $timestamp ) {
+				$post_data['post_status'] = 'future';
+				$post_data['post_date']   = gmdate( 'Y-m-d H:i:s', $timestamp );
+				$post_data['post_date_gmt'] = gmdate( 'Y-m-d H:i:s', $timestamp );
+			}
 		}
 
 		if ( self::is_dry_run( $request ) ) {

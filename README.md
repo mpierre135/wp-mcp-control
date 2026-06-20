@@ -4,7 +4,7 @@ Secure REST API for managing WordPress from **Cursor**, **Claude Desktop**, and 
 
 Pairs with the companion MCP server: [wp-mcp-control-server](https://github.com/mpierre135/wp-mcp-control-server)
 
-**Current version:** 1.2.0
+**Current version:** 2.0.0
 
 ## Install
 
@@ -73,8 +73,30 @@ Auth header: `Authorization: Bearer <token>`
 | `PUT /elementor/pages/{id}/text` | Find & replace text |
 | `PUT /elementor/pages/{id}/button` | Update buttons |
 | `POST /elementor/pages/duplicate` | Duplicate Elementor page |
+| `GET /blueprint` | Site blueprint for agents |
+| `GET /audit` | Site content audit |
+| `POST /cache/purge` | Purge LiteSpeed/other cache |
+| `GET/PUT /seo/pages/{id}` | AIOSEO meta |
+| `GET/PUT /acf/posts/{id}` | ACF fields |
+| `GET/POST /woocommerce/*` | Products, orders, bookings |
+| `GET/PUT /blocks/pages/{id}` | Gutenberg blocks |
+| `GET/POST /post-types/{type}` | Custom post types |
+| `GET /users`, `GET /comments` | Users and comments |
+| `GET /revisions/posts/{id}` | Post revisions |
 
-See full API docs in the [project README](https://github.com/mpierre135/wp-mcp-control-server#tool-catalog) (MCP tools map 1:1 to endpoints).
+## v2.0 Adapters
+
+Auto-detected when plugins are active:
+
+- **ACF** — field catalog + read/write
+- **All in One SEO** — page SEO + audit
+- **WooCommerce** — products, full order write, refunds, bookings read
+- **Ninja Forms** — forms, notifications, submissions (PII masked)
+- **LiteSpeed Cache** — purge support
+
+- `wp_elementor_find_parent`, `wp_elementor_regenerate_css`
+
+See full API docs in the [MCP server README](https://github.com/mpierre135/wp-mcp-control-server#tool-catalog) (MCP tools map 1:1 to endpoints).
 
 ## Elementor Support (v1.2.0+)
 

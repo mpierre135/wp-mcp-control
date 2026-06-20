@@ -66,6 +66,9 @@ class WP_MCP_Safe_Mode {
 			'install_plugin',
 			'install_theme',
 			'activate_destructive_plugin',
+			'db_search_replace',
+			'edit_wp_config',
+			'export_customer_pii_bulk',
 		);
 
 		if ( in_array( $action, $blocked_actions, true ) ) {
@@ -118,5 +121,68 @@ class WP_MCP_Safe_Mode {
 		}
 
 		return true;
+	}
+
+	/**
+	 * Actions requiring confirm when safe mode is on.
+	 *
+	 * @var array
+	 */
+	private static $confirm_actions = array(
+		'wc_update_order',
+		'wc_refund_order',
+		'plugin_activate',
+		'plugin_deactivate',
+		'create_user',
+		'delete_comment',
+		'purge_cache',
+		'restore_revision',
+	);
+
+	/**
+	 * Check confirm flag for sensitive actions in safe mode.
+	 *
+	 * @param string          $action  Action name.
+	 * @param WP_REST_Request $request Request.
+	 * @param bool            $confirm Confirm flag from params.
+	 * @return true|WP_Error
+	 */
+	public static function check_confirm( $action, WP_REST_Request $request, $confirm ) {
+		$blocked = self::check_action( $action, $request );
+		if ( is_wp_error( $blocked ) ) {
+			return $blocked;
+		}
+
+		if ( ! self::is_active( $request ) ) {
+			return true;
+		}
+
+		if ( in_array( $action, self::$confirm_actions, true ) && ! $confirm ) {
+			return new WP_Error(
+				'confirm_required',
+				sprintf(
+					/* translators: %s: action name */
+					__( 'Action "%s" requires confirm=true when safe mode is enabled.', 'wp-mcp-control' ),
+					$action
+				),
+				array( 'status' => 400 )
+			);
+		}
+
+		return true;
+	}
+
+	/**
+	 * Parse confirm from request JSON body.
+	 *
+	 * @param WP_REST_Request $request Request.
+	 * @return bool
+	 */
+	public static function confirm_from_request( WP_REST_Request $request ) {
+		$params = $request->get_json_params();
+		if ( is_array( $params ) && isset( $params['confirm'] ) ) {
+			return self::parse_bool( $params['confirm'] );
+		}
+		return false;
 	}
 }

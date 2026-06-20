@@ -21,6 +21,8 @@ class WP_MCP_Endpoint_Batch {
 	 */
 	private static $allowed_paths = array(
 		'/pages', '/posts', '/media', '/categories', '/tags', '/elementor',
+		'/seo', '/acf', '/woocommerce', '/blocks', '/post-types', '/forms',
+		'/users', '/comments', '/widgets', '/revisions', '/plugins', '/cache',
 	);
 
 	/**
