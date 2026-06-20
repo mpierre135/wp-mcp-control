@@ -93,10 +93,20 @@ Auto-detected when plugins are active:
 - **WooCommerce** — products, full order write, refunds, bookings read
 - **Ninja Forms** — forms, notifications, submissions (PII masked)
 - **LiteSpeed Cache** — purge support
-
-- `wp_elementor_find_parent`, `wp_elementor_regenerate_css`
+- **Elementor v2** — `find_parent`, `regenerate CSS`
 
 See full API docs in the [MCP server README](https://github.com/mpierre135/wp-mcp-control-server#tool-catalog) (MCP tools map 1:1 to endpoints).
+
+## Testing
+
+```bash
+cd tests
+TOKEN=your-token ./v2-smoke-test.sh      # v2.0 route smoke test
+TOKEN=your-token ./elementor-test.sh     # Elementor dry-run tests
+SITE_URL=https://yoursite.com TOKEN=your-token ./manual-curl.sh
+```
+
+Requires plugin **v2.0.0+** on the target site for v2 smoke tests.
 
 ## Elementor Support (v1.2.0+)
 
