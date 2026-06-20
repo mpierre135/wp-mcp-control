@@ -1,0 +1,120 @@
+{
+  "heading": {
+    "label": "Heading",
+    "editable": true,
+    "preview_field": "title",
+    "settings": {
+      "title": "text",
+      "header_size": "text",
+      "align": "text"
+    }
+  },
+  "text-editor": {
+    "label": "Text Editor",
+    "editable": true,
+    "preview_field": "editor",
+    "settings": {
+      "editor": "html"
+    }
+  },
+  "button": {
+    "label": "Button",
+    "editable": true,
+    "preview_field": "text",
+    "settings": {
+      "text": "text",
+      "link": "link",
+      "align": "text",
+      "button_type": "text",
+      "size": "text"
+    }
+  },
+  "image": {
+    "label": "Image",
+    "editable": true,
+    "preview_field": "image",
+    "settings": {
+      "image": "image",
+      "caption": "text",
+      "link": "link"
+    }
+  },
+  "icon-box": {
+    "label": "Icon Box",
+    "editable": true,
+    "preview_field": "title_text",
+    "settings": {
+      "title_text": "text",
+      "description_text": "html",
+      "link": "link",
+      "position": "text"
+    }
+  },
+  "icon-list": {
+    "label": "Icon List",
+    "editable": true,
+    "preview_field": "icon_list",
+    "settings": {
+      "icon_list": "icon_list"
+    }
+  },
+  "raven-heading": {
+    "label": "Raven Heading",
+    "editable": true,
+    "preview_field": "heading_text",
+    "settings": {
+      "heading_text": "text",
+      "sub_heading_text": "text",
+      "html_tag": "text",
+      "align": "text"
+    }
+  },
+  "raven-button": {
+    "label": "Raven Button",
+    "editable": true,
+    "preview_field": "button_text",
+    "settings": {
+      "button_text": "text",
+      "link": "link",
+      "align": "text"
+    }
+  },
+  "raven-image": {
+    "label": "Raven Image",
+    "editable": true,
+    "preview_field": "image",
+    "settings": {
+      "image": "image",
+      "caption": "text",
+      "link": "link"
+    }
+  },
+  "raven-icon-box": {
+    "label": "Raven Icon Box",
+    "editable": true,
+    "preview_field": "title",
+    "settings": {
+      "title": "text",
+      "description": "html",
+      "link": "link"
+    }
+  },
+  "raven-photo-roller": {
+    "label": "Raven Photo Roller",
+    "editable": false,
+    "preview_field": "image",
+    "settings": {}
+  },
+  "raven-tabs": {
+    "label": "Raven Tabs",
+    "editable": false,
+    "preview_field": null,
+    "settings": {}
+  },
+  "raven-slider": {
+    "label": "Raven Slider",
+    "editable": false,
+    "preview_field": null,
+    "settings": {}
+  }
+}

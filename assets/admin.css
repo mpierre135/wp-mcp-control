@@ -1,0 +1,87 @@
+.wp-mcp-admin .wp-mcp-grid {
+	display: grid;
+	grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+	gap: 20px;
+	margin: 20px 0;
+}
+
+.wp-mcp-card {
+	background: #fff;
+	border: 1px solid #c3c4c7;
+	border-radius: 4px;
+	padding: 20px;
+	margin-bottom: 20px;
+	box-shadow: 0 1px 1px rgba(0, 0, 0, 0.04);
+}
+
+.wp-mcp-card h2 {
+	margin-top: 0;
+	padding-bottom: 10px;
+	border-bottom: 1px solid #eee;
+}
+
+.wp-mcp-status {
+	display: inline-block;
+	padding: 2px 8px;
+	border-radius: 3px;
+	font-size: 12px;
+	font-weight: 600;
+}
+
+.wp-mcp-status-ok {
+	background: #d4edda;
+	color: #155724;
+}
+
+.wp-mcp-status-warn {
+	background: #fff3cd;
+	color: #856404;
+}
+
+.wp-mcp-token-box {
+	background: #f0f6fc;
+	border: 1px solid #72aee6;
+	padding: 15px;
+	margin-top: 15px;
+	border-radius: 4px;
+}
+
+.wp-mcp-token-box code {
+	display: block;
+	word-break: break-all;
+	font-size: 13px;
+	padding: 10px;
+	background: #fff;
+	margin-top: 8px;
+}
+
+.wp-mcp-config {
+	background: #1e1e1e;
+	color: #d4d4d4;
+	padding: 15px;
+	border-radius: 4px;
+	overflow-x: auto;
+	font-size: 12px;
+	line-height: 1.5;
+}
+
+.wp-mcp-config code {
+	background: transparent;
+	color: inherit;
+}
+
+.wp-mcp-admin details summary {
+	cursor: pointer;
+	margin-bottom: 10px;
+}
+
+.wp-mcp-admin details summary h2 {
+	border: none;
+}
+
+.wp-mcp-admin pre code {
+	display: block;
+	background: #f6f7f7;
+	padding: 10px;
+	border-radius: 4px;
+}
