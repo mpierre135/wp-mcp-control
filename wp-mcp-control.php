@@ -4,7 +4,7 @@
  * Plugin URI: https://github.com/mpierre135/wp-mcp-control
  * Description: Secure REST API and MCP integration for managing WordPress content from Cursor, Claude Desktop, and other MCP-compatible IDEs.
  * Version: 2.1.0
- * Author: WP MCP Control
+ * Author: R. Allan Media
  * Author URI: https://github.com/mpierre135
  * License: GPL v2 or later
  * License URI: https://www.gnu.org/licenses/gpl-2.0.html
